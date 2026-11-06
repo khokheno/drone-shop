@@ -226,31 +226,42 @@ $("#scrim").addEventListener("click", closeEditor);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeEditor(); });
 
 // Watermark stamped onto every newly uploaded photo (Settings → Watermark): the logo mark and the
-// store name in a translucent pill at the bottom corner. The mark is drawn with canvas paths rather
-// than from the SVG file, so the canvas never counts as "tainted" and can always be saved.
+// store name, small and repeated across the whole photo at 50% opacity, so it can't be cropped out
+// and the photo can't be reused. The mark is drawn with canvas paths rather than from the SVG file, so the canvas never
+// counts as "tainted" and can always be saved.
 function drawMark(x, px, py, size) {
+  const a = x.globalAlpha;
   x.save(); x.translate(px, py); x.scale(size / 64, size / 64);
   x.fillStyle = "#1f5fd6"; x.beginPath(); x.roundRect(0, 0, 64, 64, 14); x.fill();
   x.strokeStyle = "#fff"; x.lineCap = "round"; x.lineWidth = 3.5;
   x.beginPath(); x.moveTo(25, 25); x.lineTo(39, 39); x.moveTo(39, 25); x.lineTo(25, 39); x.stroke();
   for (const [cx, cy] of [[18, 18], [46, 18], [18, 46], [46, 46]]) { x.beginPath(); x.arc(cx, cy, 9, 0, Math.PI * 2); x.stroke(); }
-  x.globalAlpha = .55; x.lineWidth = 3;
+  x.globalAlpha = a * .55; x.lineWidth = 3;
   x.beginPath(); x.moveTo(12, 21); x.lineTo(24, 15); x.moveTo(40, 15); x.lineTo(52, 21); x.moveTo(12, 43); x.lineTo(24, 49); x.moveTo(40, 49); x.lineTo(52, 43); x.stroke();
-  x.globalAlpha = 1; x.fillStyle = "#fff"; x.beginPath(); x.roundRect(26, 26, 12, 12, 3); x.fill();
+  x.globalAlpha = a; x.fillStyle = "#fff"; x.beginPath(); x.roundRect(26, 26, 12, 12, 3); x.fill();
   x.fillStyle = "#1f5fd6"; x.beginPath(); x.arc(32, 32, 2.4, 0, Math.PI * 2); x.fill();
   x.restore();
 }
 async function watermark(x, w, h) {
   try { await document.fonts.load('700 20px "Chakra Petch"'); } catch {}
-  const u = Math.sqrt(w * h) / 750, pad = 8 * u, mark = 28 * u, gap = 8 * u, margin = 14 * u;
-  x.font = `700 ${Math.round(19 * u)}px "Chakra Petch", "Arial Narrow", sans-serif`;
-  const text = S.name || "PropWash Parts", tw = x.measureText(text).width;
-  const bw = pad + mark + gap + tw + pad * 1.5, bh = mark + pad * 2;
-  const bx = w - bw - margin, by = h - bh - margin;
+  const text = S.name || "PropWash Parts";
+  const fs = Math.max(11, Math.sqrt(w * h) / 750 * 17), mark = 1.3 * fs, gap = 0.35 * fs;
+  x.font = `700 ${fs}px "Chakra Petch", "Arial Narrow", sans-serif`;
+  const stamp = mark + gap + x.measureText(text).width;
+  const dx = stamp * 1.6, dy = mark * 3.2, r = Math.hypot(w, h) / 2;
   x.save();
-  x.fillStyle = "rgba(10,15,20,.5)"; x.beginPath(); x.roundRect(bx, by, bw, bh, bh / 2.4); x.fill();
-  drawMark(x, bx + pad, by + pad, mark);
-  x.fillStyle = "rgba(255,255,255,.95)"; x.textBaseline = "middle"; x.fillText(text, bx + pad + mark + gap, by + bh / 2 + u);
+  x.globalAlpha = 0.5;
+  x.translate(w / 2, h / 2); x.rotate(-Math.PI / 9);
+  x.textBaseline = "middle"; x.lineJoin = "round";
+  x.lineWidth = Math.max(1.5, fs * 0.12); x.strokeStyle = "rgba(10,15,20,.8)"; x.fillStyle = "#fff";
+  // Staggered rows that cover the whole (rotated) photo.
+  for (let row = 0, y = -r; y <= r; y += dy, row++) {
+    for (let px = -r - (row % 2 ? dx / 2 : 0); px <= r; px += dx) {
+      drawMark(x, px, y - mark / 2, mark);
+      x.strokeText(text, px + mark + gap, y + fs * 0.05);
+      x.fillText(text, px + mark + gap, y + fs * 0.05);
+    }
+  }
   x.restore();
 }
 
