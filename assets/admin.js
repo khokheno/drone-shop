@@ -265,7 +265,7 @@ function renderOrders() {
     acts.push(`<button class="ghost" type="button" data-odel="${o.id}">Delete</button>`);
     return `<article class="order s-${esc(o.status)}">
       <div class="oh"><b>${esc(o.number || o.id.slice(0, 6))}</b><span class="st ${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span><span class="note">${fmtDate(o.createdAt)}</span><span class="t">${money(o.total)}</span></div>
-      <div class="who">${esc(c.name || "—")}${c.city ? ` <span>· ${esc(c.city)}</span>` : ""}${c.note ? `<br><span>“${esc(c.note)}”</span>` : ""}</div>
+      <div class="who">${esc(c.name || "—")}${c.phone ? ` <span>· <a href="tel:${esc(c.phone)}" dir="ltr">${esc(c.phone)}</a></span>` : ""}${c.city ? ` <span>· ${esc(c.city)}</span>` : ""}${c.note ? `<br><span>“${esc(c.note)}”</span>` : ""}</div>
       <table>${(o.items || []).map(i => `<tr><td>${esc(i.name)}</td><td class="n">× ${i.qty}</td><td class="n">${money(i.price * i.qty)}</td></tr>`).join("")}</table>
       ${o.stockApplied ? `<span class="note">Stock already taken for this order.</span>` : ""}
       <div class="oa">${acts.join("")}</div></article>`;

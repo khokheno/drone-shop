@@ -46,6 +46,11 @@ Open http://localhost:8080 (shop) and http://localhost:8080/admin/ (admin). Sign
 - **Orders**: every WhatsApp checkout is also saved here with an order number (e.g. `PW-3K9QZ`) that appears in the customer's WhatsApp message. *Mark sold* takes the quantities out of stock.
 - **Settings**: store name, headline, WhatsApp number, currency, and categories.
 
+## Languages
+The shop opens in **Arabic** by default, with Hebrew and English in the switcher at the top. Each visitor's choice is remembered.
+A link can force a language: `.../drone-shop/?lang=he` or `?lang=en`. Translations live in `assets/i18n.js`, the checkout city list in `assets/cities.js`.
+The headline, intro and default category names are translated automatically. If you change them in Settings, your text is shown as written in every language.
+
 ## Free-plan limits (good to know)
 Firestore free: 50,000 reads/day. Each shop visit reads every part once, so ~100 parts handles ~500 visits a day.
 Photos are resized to ~100–200 KB and stored inside each part (no paid Storage needed).
