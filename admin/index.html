@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Shop Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/admin.css">
+</head>
+<body>
+
+<!-- Not configured -->
+<section id="vSetup" class="center" hidden>
+  <div class="panel">
+    <h1>Connect Firebase first</h1>
+    <p>Paste your Firebase web config into <code>assets/config.js</code>, then reload this page. The README has the steps.</p>
+  </div>
+</section>
+
+<!-- Login -->
+<section id="vLogin" class="center" hidden>
+  <form class="panel form" id="loginForm" novalidate>
+    <h1>Shop admin</h1>
+    <label for="lEmail">Email<input id="lEmail" type="email" autocomplete="username" required></label>
+    <label for="lPass">Password<input id="lPass" type="password" autocomplete="current-password" required></label>
+    <span class="err" id="lErr" hidden></span>
+    <button class="primary" type="submit" id="lBtn">Sign in</button>
+    <button class="linkish" type="button" id="lReset">Forgot password?</button>
+  </form>
+</section>
+
+<!-- Signed in but not an admin -->
+<section id="vNoAdmin" class="center" hidden>
+  <div class="panel">
+    <h1>One last setup step</h1>
+    <p>You're signed in, but this account isn't marked as an admin yet. In the Firebase console, open <b>Firestore Database</b>, start a collection called <code>admins</code>, and add a document whose <b>Document ID</b> is your user ID below. Add one field: <code>email</code> (string) with your email. Then reload this page.</p>
+    <div class="uid"><code id="myUid"></code><button class="ghost" type="button" id="copyUid">Copy</button></div>
+    <button class="ghost" type="button" data-signout>Sign out</button>
+  </div>
+</section>
+
+<!-- App -->
+<div id="vApp" hidden>
+  <header class="site">
+    <div class="wrap top">
+      <a class="brand" href="../" target="_blank" rel="noopener">
+        <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><circle cx="30" cy="10" r="6"/><circle cx="10" cy="30" r="6"/><circle cx="30" cy="30" r="6"/><path d="M14 14l12 12M26 14L14 26"/><rect x="16" y="16" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+        <div><b id="aStore">Shop</b><small>Admin · view shop ↗</small></div>
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        <button type="button" data-tab="parts" aria-pressed="true">Parts</button>
+        <button type="button" data-tab="orders" aria-pressed="false">Orders <span class="badge" id="newCount" hidden></span></button>
+        <button type="button" data-tab="settings" aria-pressed="false">Settings</button>
+      </nav>
+      <button class="ghost" type="button" data-signout>Sign out</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- PARTS -->
+    <section id="tParts">
+      <div class="stats" id="stats"></div>
+      <div class="toolbar">
+        <input id="pSearch" type="search" placeholder="Search parts" aria-label="Search parts">
+        <select id="pCat" aria-label="Filter by category"></select>
+        <select id="pShow" aria-label="Filter by status">
+          <option value="all">All</option><option value="low">Low stock (≤3)</option><option value="out">Sold out</option><option value="hidden">Hidden</option>
+        </select>
+        <span class="spacer"></span>
+        <button class="ghost" type="button" id="importBtn">Import CSV</button>
+        <button class="primary" type="button" id="addBtn">+ Add part</button>
+      </div>
+      <div id="pList" class="plist"></div>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="tOrders" hidden>
+      <div class="toolbar">
+        <select id="oShow" aria-label="Filter orders">
+          <option value="open">Open (new + confirmed)</option><option value="new">New</option><option value="confirmed">Confirmed</option><option value="done">Completed</option><option value="cancelled">Cancelled</option><option value="all">All</option>
+        </select>
+        <span class="note">Orders are saved when a customer taps “Send order on WhatsApp”. Match them by order number in the chat.</span>
+      </div>
+      <div id="oList" class="olist"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tSettings" hidden>
+      <form class="form settings" id="sForm" novalidate>
+        <h2>Store</h2>
+        <label for="sName">Store name<input id="sName" required></label>
+        <label for="sTag">Headline<input id="sTag"></label>
+        <label for="sIntro">Intro text<textarea id="sIntro" rows="2"></textarea></label>
+        <div class="two">
+          <label for="sWa">WhatsApp number <em>country code + number, digits only</em><input id="sWa" inputmode="numeric" placeholder="972515100532"></label>
+          <label for="sCur">Currency symbol<input id="sCur" maxlength="4"></label>
+        </div>
+        <h2>Categories</h2>
+        <p class="note">The order here is the order customers see. Renaming keeps parts in the category.</p>
+        <div id="catRows" class="cats-edit"></div>
+        <button class="ghost" type="button" id="addCat">+ Add category</button>
+        <div class="savebar"><span class="note" id="sMsg"></span><button class="primary" type="submit">Save settings</button></div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<!-- Edit part drawer -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet wide" id="editor" hidden role="dialog" aria-modal="true" aria-labelledby="eTitle">
+  <div class="sheet-head"><h2 id="eTitle">Add part</h2><button class="x" type="button" data-closeed aria-label="Close">✕</button></div>
+  <form class="sheet-body form" id="eForm" novalidate>
+    <div class="photo">
+      <div class="thumb" id="ePhoto"></div>
+      <div class="photo-ctl">
+        <label class="ghost filebtn" for="eFile">Choose photo<input id="eFile" type="file" accept="image/*"></label>
+        <button class="linkish" type="button" id="eRemovePhoto" hidden>Remove photo</button>
+        <span class="note">Photos are resized automatically.</span>
+      </div>
+    </div>
+    <label for="eName">Name<input id="eName" required maxlength="140" placeholder="2207 Freestyle Motor 1950KV"></label>
+    <div class="two">
+      <label for="eCat">Category<select id="eCat"></select></label>
+      <label for="eSort">Sort order <em>lower shows first</em><input id="eSort" type="number" step="1" value="0"></label>
+    </div>
+    <div class="two">
+      <label for="ePrice">Price<input id="ePrice" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+      <label for="eStock">In stock<input id="eStock" type="number" min="0" step="1" inputmode="numeric" required></label>
+    </div>
+    <label for="eSpecs">Specs <em>separate with commas</em><input id="eSpecs" placeholder="2207, 1950KV, 6S, 5&quot;"></label>
+    <label for="eDesc">Description <em>(optional)</em><textarea id="eDesc" rows="4" maxlength="3000" placeholder="Compatibility, what's in the box, condition…"></textarea></label>
+    <label class="check" for="eVisible"><input id="eVisible" type="checkbox" checked> Show in shop</label>
+    <span class="err" id="eErr" hidden></span>
+    <div class="savebar">
+      <button class="danger" type="button" id="eDelete" hidden>Delete</button>
+      <span class="spacer"></span>
+      <button class="ghost" type="button" data-closeed>Cancel</button>
+      <button class="primary" type="submit" id="eSave">Save part</button>
+    </div>
+  </form>
+</aside>
+
+<!-- Import drawer -->
+<aside class="sheet wide" id="importer" hidden role="dialog" aria-modal="true" aria-labelledby="iTitle">
+  <div class="sheet-head"><h2 id="iTitle">Import parts from CSV</h2><button class="x" type="button" data-closeim aria-label="Close">✕</button></div>
+  <div class="sheet-body form">
+    <p class="note">Export a sheet from Excel, Numbers or Google Sheets as CSV. First row must be headers. Columns: <code>name</code>, <code>category</code>, <code>price</code>, <code>stock</code>, <code>specs</code> (separated by <code>;</code> or <code>|</code>), <code>description</code>. Only <code>name</code> and <code>price</code> are required. Unknown categories are added automatically.</p>
+    <label class="ghost filebtn" for="iFile">Choose CSV file<input id="iFile" type="file" accept=".csv,text/csv"></label>
+    <label for="iText">…or paste CSV here<textarea id="iText" rows="6" placeholder="name,category,price,stock,specs&#10;2207 Motor 1950KV,Motors,85,12,2207;1950KV;6S"></textarea></label>
+    <div id="iPreview" class="note"></div>
+    <span class="err" id="iErr" hidden></span>
+    <div class="savebar"><span class="spacer"></span><button class="ghost" type="button" data-closeim>Cancel</button><button class="primary" type="button" id="iGo" disabled>Import</button></div>
+  </div>
+</aside>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module" src="../assets/admin.js"></script>
+</body>
+</html>
