@@ -81,9 +81,9 @@
     <section id="tOrders" hidden>
       <div class="toolbar">
         <select id="oShow" aria-label="Filter orders">
-          <option value="open">Open (new + confirmed)</option><option value="new">New</option><option value="confirmed">Confirmed</option><option value="done">Completed</option><option value="cancelled">Cancelled</option><option value="all">All</option>
+          <option value="open">Open (new + pending)</option><option value="new">New</option><option value="pending">Pending</option><option value="done">Sold</option><option value="cancelled">Cancelled</option><option value="all">All</option>
         </select>
-        <span class="note">Orders are saved when a customer taps “Send order on WhatsApp”. Match them by order number in the chat.</span>
+        <span class="note">Orders are saved when a customer taps “Send order on WhatsApp”. Match them by order number in the chat. <b>Pending</b> takes the stock out right away; <b>Mark sold</b> makes it final; cancelling a pending order puts the stock back.</span>
       </div>
       <div id="oList" class="olist"></div>
     </section>
@@ -114,13 +114,9 @@
 <aside class="sheet wide" id="editor" hidden role="dialog" aria-modal="true" aria-labelledby="eTitle">
   <div class="sheet-head"><h2 id="eTitle">Add part</h2><button class="x" type="button" data-closeed aria-label="Close">✕</button></div>
   <form class="sheet-body form" id="eForm" novalidate>
-    <div class="photo">
-      <div class="thumb" id="ePhoto"></div>
-      <div class="photo-ctl">
-        <label class="ghost filebtn" for="eFile">Choose photo<input id="eFile" type="file" accept="image/*"></label>
-        <button class="linkish" type="button" id="eRemovePhoto" hidden>Remove photo</button>
-        <span class="note">Photos are resized automatically.</span>
-      </div>
+    <div class="photos-box">
+      <div class="photos" id="ePhotos"></div>
+      <span class="note">Up to 6 photos. The first one is the cover in the shop; use the arrows to reorder. Photos are resized automatically.</span>
     </div>
     <label for="eName">Name<input id="eName" required maxlength="140" placeholder="2207 Freestyle Motor 1950KV"></label>
     <div class="two">
@@ -129,7 +125,12 @@
     </div>
     <div class="two">
       <label for="ePrice">Price<input id="ePrice" type="number" min="0" step="0.01" inputmode="decimal" required></label>
-      <label for="eStock">In stock<input id="eStock" type="number" min="0" step="1" inputmode="numeric" required></label>
+      <label for="eStock">In stock <em id="eStockNote" hidden>total of the options</em><input id="eStock" type="number" min="0" step="1" inputmode="numeric" required></label>
+    </div>
+    <div class="optbox">
+      <div><b>Options</b> <em class="note">optional · e.g. CW / CCW, colours. Each option has its own stock; customers must pick one.</em></div>
+      <div id="eOpts"></div>
+      <button class="ghost" type="button" id="eAddOpt">+ Add option</button>
     </div>
     <label for="eSpecs">Specs <em>separate with commas</em><input id="eSpecs" placeholder="2207, 1950KV, 6S, 5&quot;"></label>
     <label for="eDesc">Description <em>(optional)</em><textarea id="eDesc" rows="4" maxlength="3000" placeholder="Compatibility, what's in the box, condition…"></textarea></label>

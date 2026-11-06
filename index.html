@@ -62,7 +62,7 @@
     <form class="form" id="form" novalidate>
       <label for="cName"><span data-i18n="yourName">اسمك</span><input id="cName" autocomplete="name" required></label>
       <label for="cPhone"><span data-i18n="phone">رقم الهاتف</span><input id="cPhone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="050-1234567" required></label>
-      <label for="cCity"><span><span data-i18n="city">المدينة</span> <em data-i18n="forDelivery">(للتوصيل)</em></span><select id="cCity" required></select></label>
+      <label for="cCity"><span><span data-i18n="city">المدينة / البلدة</span> <em data-i18n="forDelivery">(للتوصيل)</em></span><input id="cCity" autocomplete="address-level2" required></label>
       <label for="cNote"><span><span data-i18n="notes">ملاحظات</span> <em data-i18n="optional">(اختياري)</em></span><textarea id="cNote" rows="2" placeholder="استلام أو توصيل، أسئلة عن قطعة…" data-i18n-ph="notesPh"></textarea></label>
       <span class="err" id="err" hidden role="alert"></span>
       <a class="wa" id="waBtn" href="#" target="_blank" rel="noopener">

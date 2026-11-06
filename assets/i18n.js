@@ -9,8 +9,9 @@ export const LANGS = [
 
 const T = {
   ar: {
-    phone: "رقم الهاتف", mPhone: "الهاتف", chooseCity: "اختر مدينة", otherCity: "مدينة أخرى (اكتبها في الملاحظات)",
-    phoneErr: "أدخل رقم هاتف صحيح، مثل 050-1234567.", cityErr: "اختر مدينتك من القائمة.",
+    choose: "اختر", pickOption: "اختر النوع:", prevPhoto: "الصورة السابقة", nextPhoto: "الصورة التالية", photo: n => `صورة ${n}`,
+    phone: "رقم الهاتف", mPhone: "الهاتف",
+    phoneErr: "أدخل رقم هاتف صحيح، مثل 050-1234567.", cityErr: "اكتب مدينتك أو بلدتك.",
     sub: "FPV · DJI · قطع جديدة",
     searchPh: "ابحث: 2207، ELRS، Avata…", searchLabel: "ابحث عن قطع", catsLabel: "الفئات", langLabel: "اللغة",
     tagline: "قطع FPV و DJI جديدة، جاهزة للشحن",
@@ -18,7 +19,7 @@ const T = {
     how1: "1 · أضف القطع", how2: "2 · راجع السلة", how3: "3 · أرسل عبر واتساب",
     footer: "جميع القطع جديدة وغير مستعملة. يتم ترتيب الدفع والتوصيل عبر واتساب.",
     viewCart: "عرض السلة", cart: "السلة", yourCart: "سلتك", closeCart: "إغلاق السلة", close: "إغلاق", total: "المجموع",
-    yourName: "اسمك", city: "المدينة", forDelivery: "(للتوصيل)", notes: "ملاحظات", optional: "(اختياري)",
+    yourName: "اسمك", city: "المدينة / البلدة", forDelivery: "(للتوصيل)", notes: "ملاحظات", optional: "(اختياري)",
     notesPh: "استلام أو توصيل، أسئلة عن قطعة…", nameErr: "أضف اسمك لنعرف ممن الطلب.",
     sendWa: "أرسل الطلب عبر واتساب", waNote: "سيفتح واتساب والطلب مكتوب جاهزًا. فقط اضغط إرسال. رقمنا:",
     fallback: "لم يفتح واتساب؟ انسخ الطلب وأرسله إلى الرقم أعلاه.",
@@ -33,8 +34,9 @@ const T = {
     cats: { motors: "محركات", props: "مراوح", frames: "هياكل", stack: "متحكم طيران و ESC", video: "كاميرات و VTX", radio: "مستقبلات", batteries: "بطاريات", other: "أخرى" }
   },
   he: {
-    phone: "מספר טלפון", mPhone: "טלפון", chooseCity: "בחרו עיר", otherCity: "עיר אחרת (כתבו בהערות)",
-    phoneErr: "הזינו מספר טלפון תקין, למשל 050-1234567.", cityErr: "בחרו את העיר שלכם מהרשימה.",
+    choose: "בחירה", pickOption: "בחרו סוג:", prevPhoto: "התמונה הקודמת", nextPhoto: "התמונה הבאה", photo: n => `תמונה ${n}`,
+    phone: "מספר טלפון", mPhone: "טלפון",
+    phoneErr: "הזינו מספר טלפון תקין, למשל 050-1234567.", cityErr: "כתבו את העיר או היישוב שלכם.",
     sub: "FPV · DJI · חלקים חדשים",
     searchPh: "חיפוש: 2207, ELRS, Avata…", searchLabel: "חיפוש חלקים", catsLabel: "קטגוריות", langLabel: "שפה",
     tagline: "חלקי FPV ו-DJI חדשים, מוכנים למשלוח",
@@ -42,7 +44,7 @@ const T = {
     how1: "1 · הוסיפו חלקים", how2: "2 · בדקו את העגלה", how3: "3 · שלחו בוואטסאפ",
     footer: "כל החלקים חדשים ולא משומשים. תשלום ומשלוח מתואמים בוואטסאפ.",
     viewCart: "לעגלה", cart: "עגלה", yourCart: "העגלה שלך", closeCart: "סגירת העגלה", close: "סגירה", total: "סה״כ",
-    yourName: "השם שלך", city: "עיר", forDelivery: "(למשלוח)", notes: "הערות", optional: "(לא חובה)",
+    yourName: "השם שלך", city: "עיר / יישוב", forDelivery: "(למשלוח)", notes: "הערות", optional: "(לא חובה)",
     notesPh: "איסוף או משלוח, שאלות על חלק…", nameErr: "הוסיפו את השם כדי שנדע ממי ההזמנה.",
     sendWa: "שליחת ההזמנה בוואטסאפ", waNote: "וואטסאפ ייפתח עם ההזמנה כתובה. רק ללחוץ שליחה. המספר שלנו:",
     fallback: "וואטסאפ לא נפתח? העתיקו את ההזמנה ושלחו אותה למספר שלמעלה.",
@@ -57,15 +59,16 @@ const T = {
     cats: { motors: "מנועים", props: "פרופלורים", frames: "שלדות", stack: "בקר טיסה ו-ESC", video: "מצלמות ו-VTX", radio: "מקלטים", batteries: "סוללות", other: "אחר" }
   },
   en: {
-    phone: "Phone number", mPhone: "Phone", chooseCity: "Choose a city", otherCity: "Other city (write it in the notes)",
-    phoneErr: "Enter a valid phone number, e.g. 050-1234567.", cityErr: "Choose your city from the list.",
+    choose: "Choose", pickOption: "Choose a type:", prevPhoto: "Previous photo", nextPhoto: "Next photo", photo: n => `Photo ${n}`,
+    phone: "Phone number", mPhone: "Phone",
+    phoneErr: "Enter a valid phone number, e.g. 050-1234567.", cityErr: "Write your city or town.",
     sub: "FPV · DJI · new parts",
     searchPh: "Search 2207, ELRS, Avata…", searchLabel: "Search parts", catsLabel: "Categories", langLabel: "Language",
     tagline: DEFAULT_SETTINGS.tagline, intro: DEFAULT_SETTINGS.intro,
     how1: "1 · Add parts", how2: "2 · Review cart", how3: "3 · Send on WhatsApp",
     footer: "All parts are new and unused. Payment and delivery are arranged on WhatsApp.",
     viewCart: "View cart", cart: "Cart", yourCart: "Your cart", closeCart: "Close cart", close: "Close", total: "Total",
-    yourName: "Your name", city: "City", forDelivery: "(for delivery)", notes: "Notes", optional: "(optional)",
+    yourName: "Your name", city: "City / town", forDelivery: "(for delivery)", notes: "Notes", optional: "(optional)",
     notesPh: "Pickup or delivery, questions about a part…", nameErr: "Add your name so we know who the order is from.",
     sendWa: "Send order on WhatsApp", waNote: "WhatsApp opens with your order written out. Just press send. Our number:",
     fallback: "WhatsApp didn't open? Copy the order and send it to the number above.",

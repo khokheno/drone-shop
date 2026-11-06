@@ -1,6 +1,6 @@
 import {
   configured, db, auth, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-  query, orderBy, limit, writeBatch, increment, serverTimestamp, onSnapshot,
+  getDocs, query, orderBy, limit, writeBatch, increment, serverTimestamp, onSnapshot,
   signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
 } from "./firebase.js";
 import { esc, slug, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js";
@@ -128,20 +128,31 @@ function renderParts() {
       <div class="pn"><b>${esc(p.name)}</b><small>${esc(catLabel(p.category))}${(p.specs || []).length ? " · " + esc(p.specs.join(" · ")) : ""}</small> ${pill}</div>
       <div class="pp">${money(p.price)}</div>
       <div class="acts">
-        <div class="stepper sm" title="Stock"><button type="button" data-stock="-1" data-id="${p.id}" aria-label="Stock down" ${!(p.stock > 0) ? "disabled" : ""}>−</button><output>${p.stock || 0}</output><button type="button" data-stock="1" data-id="${p.id}" aria-label="Stock up">+</button></div>
+        ${(p.options || []).length ? `<div class="ostk">${p.options.map(o => `<span>${esc(o.label)}</span>${stockStepper(p, o)}`).join("")}</div>` : stockStepper(p)}
         <button class="ghost" type="button" data-vis="${p.id}">${p.visible === false ? "Show" : "Hide"}</button>
         <button class="ghost" type="button" data-edit="${p.id}">Edit</button>
       </div></div>`;
   }).join("");
 }
 
+function stockStepper(p, o) {
+  const n = (o ? o.stock : p.stock) || 0, opt = o ? ` data-opt="${esc(o.id)}"` : "";
+  return `<div class="stepper sm" title="Stock"><button type="button" data-stock="-1" data-id="${p.id}"${opt} aria-label="Stock down" ${n > 0 ? "" : "disabled"}>−</button><output>${n}</output><button type="button" data-stock="1" data-id="${p.id}"${opt} aria-label="Stock up">+</button></div>`;
+}
+// Parts with options keep stock per option; the part's own stock is always their total.
+const sumStock = opts => opts.reduce((n, o) => n + (o.stock || 0), 0);
+
 document.addEventListener("click", async e => {
   const t = e.target.closest("[data-stock],[data-vis],[data-edit],[data-new]");
   if (!t) return;
   if (t.dataset.stock) {
-    const p = products.find(x => x.id === t.dataset.id);
-    const next = Math.max(0, (p.stock || 0) + Number(t.dataset.stock));
-    updateDoc(doc(db, "products", p.id), { stock: next, updatedAt: serverTimestamp() }).catch(er => fail(er, "Stock"));
+    const p = products.find(x => x.id === t.dataset.id), d = Number(t.dataset.stock);
+    let data;
+    if (t.dataset.opt) {
+      const options = p.options.map(o => o.id === t.dataset.opt ? { ...o, stock: Math.max(0, (o.stock || 0) + d) } : o);
+      data = { options, stock: sumStock(options) };
+    } else data = { stock: Math.max(0, (p.stock || 0) + d) };
+    updateDoc(doc(db, "products", p.id), { ...data, updatedAt: serverTimestamp() }).catch(er => fail(er, "Stock"));
   } else if (t.dataset.vis) {
     const p = products.find(x => x.id === t.dataset.vis);
     updateDoc(doc(db, "products", p.id), { visible: p.visible === false, updatedAt: serverTimestamp() })
@@ -160,9 +171,13 @@ async function loadSamples() {
 }
 
 // ───────── Editor ─────────
-let editing = null, photo = "";
-function openEditor(p) {
-  editing = p; photo = p?.image || "";
+// The cover photo lives on the part itself (the shop grid needs only that); the other photos are
+// stored one per document in products/{id}/photos and loaded when a customer opens the part.
+const MAX_PHOTOS = 6;
+let editing = null, photos = [], opts = [];
+async function openEditor(p) {
+  editing = p; photos = p?.image ? [p.image] : [];
+  opts = (p?.options || []).map(o => ({ ...o }));
   $("#eTitle").textContent = p ? "Edit part" : "Add part";
   $("#eName").value = p?.name || "";
   $("#eCat").value = p?.category || S.categories[0]?.id || "other";
@@ -173,21 +188,41 @@ function openEditor(p) {
   $("#eDesc").value = p?.description || "";
   $("#eVisible").checked = p ? p.visible !== false : true;
   $("#eDelete").hidden = !p; disarm();
-  $("#eErr").hidden = true; $("#eFile").value = "";
-  drawPhoto();
+  $("#eErr").hidden = true;
+  drawOpts();
   $("#editor").hidden = false; $("#scrim").hidden = false;
   setTimeout(() => $("#eName").focus(), 50);
+  if (p?.photoCount > 0) {
+    $("#eSave").disabled = true; drawPhotos(true);
+    try {
+      const snap = await getDocs(collection(db, "products", p.id, "photos"));
+      if (editing === p) photos = [p.image, ...snap.docs.map(d => d.data()).sort((a, b) => a.i - b.i).map(x => x.data)];
+    } catch (e) { fail(e, "Photos"); }
+    if (editing === p) $("#eSave").disabled = false;
+  }
+  drawPhotos();
 }
 function closeEditor() { $("#editor").hidden = true; $("#importer").hidden = true; $("#scrim").hidden = true; }
-function drawPhoto() {
-  $("#ePhoto").innerHTML = photo ? `<img src="${photo}" alt="">` : iconFor($("#eCat").value);
-  $("#eRemovePhoto").hidden = !photo;
+function drawPhotos(loading) {
+  $("#ePhotos").innerHTML = (photos.length ? photos : [""]).map((src, i) => src ? `<div class="ph"><img src="${src}" alt="">
+      ${i ? "" : `<span class="cover">Cover</span>`}
+      <div class="pa"><button type="button" data-pmove="${i}" data-d="-1" aria-label="Move earlier" ${i ? "" : "disabled"}>‹</button>
+      <button type="button" data-pdel="${i}" aria-label="Remove photo">✕</button>
+      <button type="button" data-pmove="${i}" data-d="1" aria-label="Move later" ${i < photos.length - 1 ? "" : "disabled"}>›</button></div></div>`
+    : `<div class="ph">${iconFor($("#eCat").value)}</div>`).join("") +
+    (loading ? `<div class="ph loading">Loading photos…</div>` : photos.length < MAX_PHOTOS
+      ? `<label class="ph add" for="eFile">+ Add photo${photos.length ? "s" : ""}<input id="eFile" type="file" accept="image/*" multiple></label>` : "");
+  $("#eFile")?.addEventListener("change", addPhotos);
 }
-$("#eCat").addEventListener("change", () => { if (!photo) drawPhoto(); });
+$("#ePhotos").addEventListener("click", e => {
+  const m = e.target.closest("[data-pmove]"), d = e.target.closest("[data-pdel]");
+  if (m) { const i = +m.dataset.pmove, j = i + +m.dataset.d; [photos[i], photos[j]] = [photos[j], photos[i]]; drawPhotos(); }
+  if (d) { photos.splice(+d.dataset.pdel, 1); drawPhotos(); }
+});
+$("#eCat").addEventListener("change", () => { if (!photos.length) drawPhotos(); });
 $$("[data-closeed]").forEach(b => b.addEventListener("click", closeEditor));
 $("#scrim").addEventListener("click", closeEditor);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeEditor(); });
-$("#eRemovePhoto").addEventListener("click", () => { photo = ""; drawPhoto(); });
 
 async function resizeImage(file) {
   const url = URL.createObjectURL(file);
@@ -202,33 +237,72 @@ async function resizeImage(file) {
     return data;
   } finally { URL.revokeObjectURL(url); }
 }
-$("#eFile").addEventListener("change", async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try { photo = await resizeImage(f); drawPhoto(); }
-  catch { $("#eErr").textContent = "That file couldn't be read as a photo. Try a JPG or PNG."; $("#eErr").hidden = false; }
+async function addPhotos(e) {
+  const files = [...e.target.files], room = MAX_PHOTOS - photos.length;
+  let bad = 0;
+  for (const f of files.slice(0, room)) { try { photos.push(await resizeImage(f)); } catch { bad++; } }
+  drawPhotos();
+  const msg = [bad && "Some files couldn't be read as photos. Try JPG or PNG.", files.length > room && `Only ${MAX_PHOTOS} photos per part; the extra ones were skipped.`].filter(Boolean).join(" ");
+  $("#eErr").textContent = msg; $("#eErr").hidden = !msg;
+}
+
+// Options (e.g. CW / CCW), each with its own stock.
+function drawOpts() {
+  $("#eOpts").innerHTML = opts.map((o, i) => `<div class="optrow">
+    <input data-olabel="${i}" value="${esc(o.label)}" placeholder="${i ? "CCW" : "CW"}" aria-label="Option name" maxlength="40">
+    <input data-ostock="${i}" value="${o.stock ?? 0}" type="number" min="0" step="1" inputmode="numeric" aria-label="Stock for this option">
+    <button type="button" data-odelopt="${i}" aria-label="Remove option">✕</button></div>`).join("");
+  syncStock();
+}
+function syncStock() {
+  const on = opts.length > 0;
+  $("#eStock").disabled = on; $("#eStockNote").hidden = !on;
+  if (on) $("#eStock").value = sumStock(opts.map(o => ({ stock: parseInt(o.stock, 10) || 0 })));
+}
+$("#eOpts").addEventListener("input", e => {
+  const l = e.target.dataset.olabel, n = e.target.dataset.ostock;
+  if (l !== undefined) opts[l].label = e.target.value;
+  if (n !== undefined) { opts[n].stock = e.target.value; syncStock(); }
+});
+$("#eOpts").addEventListener("click", e => { const d = e.target.closest("[data-odelopt]"); if (d) { opts.splice(+d.dataset.odelopt, 1); drawOpts(); } });
+$("#eAddOpt").addEventListener("click", () => {
+  // The first option inherits the part's current stock so nothing is lost.
+  opts.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), label: "", stock: opts.length ? 0 : parseInt($("#eStock").value, 10) || 0 });
+  drawOpts(); $(`[data-olabel="${opts.length - 1}"]`).focus();
 });
 
 $("#eForm").addEventListener("submit", async e => {
   e.preventDefault();
   const err = $("#eErr"); err.hidden = true;
-  const name = $("#eName").value.trim(), price = parseFloat($("#ePrice").value), stock = parseInt($("#eStock").value, 10);
-  if (!name) { err.textContent = "Give the part a name."; err.hidden = false; return; }
-  if (!(price >= 0)) { err.textContent = "Enter a price (0 or more)."; err.hidden = false; return; }
-  if (!(stock >= 0)) { err.textContent = "Enter how many are in stock (0 or more)."; err.hidden = false; return; }
-  const data = {
-    name, price, stock,
+  const name = $("#eName").value.trim(), price = parseFloat($("#ePrice").value);
+  const options = opts.map(o => ({ id: o.id, label: o.label.trim(), stock: parseInt(o.stock, 10) }));
+  const stock = options.length ? sumStock(options) : parseInt($("#eStock").value, 10);
+  const say = m => { err.textContent = m; err.hidden = false; };
+  if (!name) return say("Give the part a name.");
+  if (!(price >= 0)) return say("Enter a price (0 or more).");
+  if (options.some(o => !o.label)) return say("Give every option a name, or remove the empty one.");
+  if (new Set(options.map(o => o.label.toLowerCase())).size !== options.length) return say("Two options have the same name.");
+  if (options.some(o => !(o.stock >= 0))) return say("Enter the stock for every option (0 or more).");
+  if (!(stock >= 0)) return say("Enter how many are in stock (0 or more).");
+  const ref = editing ? doc(db, "products", editing.id) : doc(collection(db, "products"));
+  const oldCount = editing?.photoCount || 0, newCount = Math.max(0, photos.length - 1);
+  const b = writeBatch(db);
+  b.set(ref, {
+    name, price, stock, options,
     category: $("#eCat").value,
     sort: parseInt($("#eSort").value, 10) || 0,
     specs: $("#eSpecs").value.split(/[,;|]/).map(s => s.trim()).filter(Boolean).slice(0, 12),
     description: $("#eDesc").value.trim(),
     visible: $("#eVisible").checked,
-    image: photo,
+    image: photos[0] || "",
+    photoCount: newCount,
     updatedAt: serverTimestamp()
-  };
+  }, { merge: true });
+  photos.slice(1).forEach((data, j) => b.set(doc(ref, "photos", String(j + 1)), { i: j + 1, data }));
+  for (let j = newCount + 1; j <= oldCount; j++) b.delete(doc(ref, "photos", String(j)));
   $("#eSave").disabled = true;
   try {
-    if (editing) await setDoc(doc(db, "products", editing.id), data, { merge: true });
-    else await addDoc(collection(db, "products"), data);
+    await b.commit();
     toast(editing ? "Part saved" : "Part added");
     closeEditor();
   } catch (ex) { fail(ex, "Part"); }
@@ -239,61 +313,99 @@ let armed = false;
 function disarm() { armed = false; $("#eDelete").classList.remove("armed"); $("#eDelete").textContent = "Delete"; }
 $("#eDelete").addEventListener("click", async () => {
   if (!armed) { armed = true; $("#eDelete").classList.add("armed"); $("#eDelete").textContent = "Tap again to delete"; setTimeout(disarm, 4000); return; }
-  try { await deleteDoc(doc(db, "products", editing.id)); toast("Part deleted"); closeEditor(); } catch (e) { fail(e, "Delete"); }
+  const ref = doc(db, "products", editing.id), b = writeBatch(db);
+  for (let j = 1; j <= (editing.photoCount || 0); j++) b.delete(doc(ref, "photos", String(j)));
+  b.delete(ref);
+  try { await b.commit(); toast("Part deleted"); closeEditor(); } catch (e) { fail(e, "Delete"); }
 });
 
 // ───────── Orders ─────────
+// New → Pending takes the stock out right away so the shop can't oversell it.
+// Pending → Sold is final. Pending → Cancelled (or deleting a pending order) puts the stock back.
+// stockApplied on an order means its quantities are currently out of stock.
 $("#oShow").addEventListener("input", renderOrders);
 const fmtDate = ts => ts?.toDate ? ts.toDate().toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "just now";
-const STATUS = { new: "New", confirmed: "Confirmed", done: "Completed", cancelled: "Cancelled" };
+const STATUS = { new: "New", pending: "Pending", confirmed: "Confirmed", done: "Sold", cancelled: "Cancelled" };
+const OPEN = ["new", "pending", "confirmed"];
 
 function renderOrders() {
   const n = orders.filter(o => o.status === "new").length;
   $("#newCount").hidden = !n; $("#newCount").textContent = n;
   const f = $("#oShow").value;
-  const list = orders.filter(o => f === "all" || (f === "open" ? ["new", "confirmed"].includes(o.status) : o.status === f));
+  const list = orders.filter(o => f === "all" || (f === "open" ? OPEN.includes(o.status) : o.status === f));
   if (!list.length) { $("#oList").innerHTML = `<p class="empty">${orders.length ? "No orders with this status." : "No orders yet. They'll appear here when customers send their cart on WhatsApp."}</p>`; return; }
   $("#oList").innerHTML = list.map(o => {
     const c = o.customer || {};
-    const acts = [];
-    if (o.status === "new") acts.push(`<button class="primary" type="button" data-ost="confirmed" data-oid="${o.id}">Confirm</button>`);
-    if (["new", "confirmed"].includes(o.status)) {
-      acts.push(`<button class="primary" type="button" data-sold="${o.id}">Mark sold · take from stock</button>`);
-      acts.push(`<button class="ghost" type="button" data-ost="cancelled" data-oid="${o.id}">Cancel</button>`);
-    }
-    if (["done", "cancelled"].includes(o.status) && !o.stockApplied) acts.push(`<button class="ghost" type="button" data-ost="new" data-oid="${o.id}">Reopen</button>`);
-    acts.push(`<button class="ghost" type="button" data-odel="${o.id}">Delete</button>`);
+    const acts = [], btn = (cls, attrs, label) => acts.push(`<button class="${cls}" type="button" ${attrs} data-oid="${o.id}">${label}</button>`);
+    if (o.status === "new") {
+      btn("primary", `data-oact="hold"`, "Pending · hold stock");
+      btn("ghost", `data-oact="sold"`, "Mark sold");
+      btn("ghost", `data-oact="cancel"`, "Cancel");
+    } else if (o.status === "pending" || o.status === "confirmed") {
+      btn("primary", `data-oact="sold"`, "Mark sold · final");
+      btn("ghost", `data-oact="cancel"`, o.stockApplied ? "Cancel · return stock" : "Cancel");
+    } else if (o.status === "cancelled" && !o.stockApplied) btn("ghost", `data-oact="reopen"`, "Reopen");
+    btn("ghost", `data-oact="delete"`, "Delete");
+    const note = o.stockApplied ? (o.status === "done" ? "Sold · stock taken out." : "Stock is held for this order.") : "";
     return `<article class="order s-${esc(o.status)}">
       <div class="oh"><b>${esc(o.number || o.id.slice(0, 6))}</b><span class="st ${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span><span class="note">${fmtDate(o.createdAt)}</span><span class="t">${money(o.total)}</span></div>
       <div class="who">${esc(c.name || "—")}${c.phone ? ` <span>· <a href="tel:${esc(c.phone)}" dir="ltr">${esc(c.phone)}</a></span>` : ""}${c.city ? ` <span>· ${esc(c.city)}</span>` : ""}${c.note ? `<br><span>“${esc(c.note)}”</span>` : ""}</div>
       <table>${(o.items || []).map(i => `<tr><td>${esc(i.name)}</td><td class="n">× ${i.qty}</td><td class="n">${money(i.price * i.qty)}</td></tr>`).join("")}</table>
-      ${o.stockApplied ? `<span class="note">Stock already taken for this order.</span>` : ""}
+      ${note ? `<span class="note">${note}</span>` : ""}
       <div class="oa">${acts.join("")}</div></article>`;
   }).join("");
 }
 
+// Adds the stock changes for an order to a batch: sign -1 takes stock out, +1 puts it back.
+// Items of the same part (e.g. CW and CCW) are combined into one update.
+function stockChanges(b, o, sign) {
+  const next = {}, missing = [];
+  for (const i of o.items || []) {
+    const p = next[i.id] || (() => { const x = products.find(x => x.id === i.id); return x && { ...x, options: (x.options || []).map(o => ({ ...o })) }; })();
+    if (!p) { missing.push(i.name); continue; }
+    next[i.id] = p;
+    if (i.option) {
+      const op = p.options.find(x => x.id === i.option);
+      if (!op) { missing.push(i.name); continue; }
+      op.stock = Math.max(0, (op.stock || 0) + sign * i.qty);
+    } else if (p.options.length) missing.push(i.name); // ordered before the part had options
+    else p.stock = Math.max(0, (p.stock || 0) + sign * i.qty);
+  }
+  for (const p of Object.values(next)) {
+    const stock = p.options.length ? sumStock(p.options) : p.stock;
+    b.update(doc(db, "products", p.id), { stock, ...(p.options.length ? { options: p.options } : {}), updatedAt: serverTimestamp() });
+  }
+  return missing;
+}
+
 const armedDel = new Set();
 document.addEventListener("click", async e => {
-  const t = e.target.closest("[data-ost],[data-sold],[data-odel]"); if (!t) return;
+  const t = e.target.closest("[data-oact]"); if (!t) return;
+  const o = orders.find(x => x.id === t.dataset.oid), act = t.dataset.oact, ref = doc(db, "orders", o.id);
   try {
-    if (t.dataset.ost) { await updateDoc(doc(db, "orders", t.dataset.oid), { status: t.dataset.ost }); toast("Order " + STATUS[t.dataset.ost].toLowerCase()); }
-    else if (t.dataset.sold) {
-      const o = orders.find(x => x.id === t.dataset.sold);
-      const b = writeBatch(db);
-      const missing = [];
-      for (const i of o.items || []) {
-        const p = products.find(x => x.id === i.id);
-        if (!p) { missing.push(i.name); continue; }
-        b.update(doc(db, "products", p.id), { stock: Math.max(0, (p.stock || 0) - i.qty), updatedAt: serverTimestamp() });
-      }
-      b.update(doc(db, "orders", o.id), { status: "done", stockApplied: true });
-      await b.commit();
-      toast(missing.length ? `Marked sold. Not in catalog anymore: ${missing.join(", ")}` : "Marked sold and stock updated");
-    } else if (t.dataset.odel) {
-      const id = t.dataset.odel;
-      if (!armedDel.has(id)) { armedDel.add(id); t.textContent = "Tap again to delete"; t.classList.add("danger"); setTimeout(() => { armedDel.delete(id); renderOrders(); }, 4000); return; }
-      await deleteDoc(doc(db, "orders", id)); toast("Order deleted");
+    if (act === "delete" && !armedDel.has(o.id)) {
+      armedDel.add(o.id); t.textContent = "Tap again to delete"; t.classList.add("danger");
+      setTimeout(() => { armedDel.delete(o.id); renderOrders(); }, 4000); return;
     }
+    const b = writeBatch(db);
+    let missing = [], msg;
+    if (act === "hold") {
+      missing = stockChanges(b, o, -1); b.update(ref, { status: "pending", stockApplied: true }); msg = "Pending · stock held";
+    } else if (act === "sold") {
+      if (!o.stockApplied) missing = stockChanges(b, o, -1);
+      b.update(ref, { status: "done", stockApplied: true }); msg = "Marked sold";
+    } else if (act === "cancel") {
+      if (o.stockApplied) missing = stockChanges(b, o, 1);
+      b.update(ref, { status: "cancelled", stockApplied: false }); msg = o.stockApplied ? "Cancelled · stock returned" : "Order cancelled";
+    } else if (act === "reopen") {
+      b.update(ref, { status: "new" }); msg = "Order reopened";
+    } else if (act === "delete") {
+      // A pending order's held stock goes back; a sold order's stays out.
+      if (o.stockApplied && o.status !== "done") missing = stockChanges(b, o, 1);
+      b.delete(ref); msg = "Order deleted";
+    }
+    await b.commit();
+    toast(missing.length ? `${msg}. Not in catalog anymore: ${missing.join(", ")}` : msg);
   } catch (ex) { fail(ex, "Order"); }
 });
 

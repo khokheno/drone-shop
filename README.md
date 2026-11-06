@@ -43,12 +43,18 @@ Open http://localhost:8080 (shop) and http://localhost:8080/admin/ (admin). Sign
 ## Using the admin
 - **Parts**: add/edit with photo, price, stock, specs, description; tap −/+ to change stock; Hide removes a part from the shop without deleting it.
 - **Import CSV**: export your spreadsheet as CSV (see `sample-parts.csv`). Specs are separated by `;`.
-- **Orders**: every WhatsApp checkout is also saved here with an order number (e.g. `PW-3K9QZ`) that appears in the customer's WhatsApp message. *Mark sold* takes the quantities out of stock.
+- **Photos**: up to 6 per part. The first is the cover in the shop grid; the rest are loaded only when a customer opens the part, where they can swipe through them.
+- **Options**: for parts that come in variants (CW / CCW, colours), add options in the editor, each with its own stock. Customers must pick one; the part's stock is the total of its options.
+- **Orders**: every WhatsApp checkout is also saved here with an order number (e.g. `PW-3K9QZ`) that appears in the customer's WhatsApp message, with the customer's name, phone and city.
+  - *Pending · hold stock* takes the quantities out of stock right away, so the shop can't sell them twice.
+  - *Mark sold* makes it final (and takes the stock out if it wasn't held yet).
+  - *Cancel* (or deleting) a pending order puts the stock back. Deleting a sold order leaves stock as it is.
+  - Nothing changes stock at checkout itself: until you mark an order pending, its parts can still be bought by someone else.
 - **Settings**: store name, headline, WhatsApp number, currency, and categories.
 
 ## Languages
 The shop opens in **Arabic** by default, with Hebrew and English in the switcher at the top. Each visitor's choice is remembered.
-A link can force a language: `.../drone-shop/?lang=he` or `?lang=en`. Translations live in `assets/i18n.js`, the checkout city list in `assets/cities.js`.
+A link can force a language: `.../drone-shop/?lang=he` or `?lang=en`. Translations live in `assets/i18n.js`.
 The headline, intro and default category names are translated automatically. If you change them in Settings, your text is shown as written in every language.
 
 ## Free-plan limits (good to know)

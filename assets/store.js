@@ -1,7 +1,6 @@
 import { configured, db, collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from "./firebase.js";
 import { esc, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js";
-import { t, lang, catName, settingText, setLang, applyStatic } from "./i18n.js";
-import { CITIES } from "./cities.js";
+import { t, catName, settingText, setLang, applyStatic } from "./i18n.js";
 
 const $ = s => document.querySelector(s);
 let S = { ...DEFAULT_SETTINGS };
@@ -12,6 +11,17 @@ let cat = "all", query = "";
 let cart = {};
 try { cart = JSON.parse(localStorage.getItem("pw_cart") || "{}") || {}; } catch { cart = {}; }
 const saveCart = () => { try { localStorage.setItem("pw_cart", JSON.stringify(cart)); } catch {} };
+
+// Cart keys are "productId" or, for a part with options (e.g. CW / CCW), "productId~optionId".
+const hasOpts = p => (p.options || []).length > 0;
+const keyOf = (p, o) => o ? p.id + "~" + o.id : p.id;
+function parseKey(k) {
+  const [pid, oid] = k.split("~"), p = byId[pid];
+  const o = p && oid ? (p.options || []).find(x => x.id === oid) : null;
+  return { p, o, ok: !!p && (oid ? !!o : !hasOpts(p)) };
+}
+const stockOf = k => { const { p, o } = parseKey(k); return (o ? o.stock : p?.stock) || 0; };
+const itemName = k => { const { p, o } = parseKey(k); return o ? `${p.name} — ${o.label}` : p.name; };
 
 async function load() {
   if (!configured) {
@@ -34,7 +44,7 @@ async function load() {
   }
   PRODUCTS.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || String(a.name).localeCompare(b.name));
   byId = Object.fromEntries(PRODUCTS.map(p => [p.id, p]));
-  for (const k in cart) if (!byId[k] || !(byId[k].stock > 0)) delete cart[k]; else cart[k] = Math.min(cart[k], byId[k].stock);
+  for (const k in cart) if (!parseKey(k).ok || !(stockOf(k) > 0)) delete cart[k]; else cart[k] = Math.min(cart[k], stockOf(k));
   saveCart();
   money = moneyFmt(S.currency || "₪");
   document.title = S.name;
@@ -47,21 +57,10 @@ function renderAll() {
   applyStatic();
   $("#tagline").textContent = settingText("tagline", S.tagline);
   $("#introText").textContent = settingText("intro", S.intro);
-  renderCities(); renderCats(); renderGrid(); renderCart();
+  renderCats(); renderGrid(); renderCart();
 }
 
-const cityCol = () => ({ en: 0, he: 1, ar: 2 })[lang];
-function renderCities() {
-  const sel = $("#cCity"), cur = sel.value, i = cityCol();
-  const opts = CITIES.map((c, n) => [n, c[i]]).sort((a, b) => a[1].localeCompare(b[1], lang));
-  sel.innerHTML = `<option value="" disabled>${esc(t("chooseCity"))}</option>` +
-    opts.map(([n, name]) => `<option value="${n}">${esc(name)}</option>`).join("") +
-    `<option value="other">${esc(t("otherCity"))}</option>`;
-  sel.value = cur;
-}
-const cityName = () => { const v = $("#cCity").value; return v === "other" ? t("otherCity") : v ? CITIES[v][cityCol()] : ""; };
 const phoneOk = ph => /^(0\d{8,9}|972\d{8,9})$/.test(ph.replace(/\D/g, ""));
-
 const catLabel = id => { const c = S.categories.find(c => c.id === id); return c ? catName(c) : id || catName({ id: "other", label: "Other" }); };
 
 function renderCats() {
@@ -74,28 +73,38 @@ function renderCats() {
   }).join("");
 }
 
-function stepper(p, q) {
-  return `<div class="stepper"><button type="button" data-dec="${p.id}" aria-label="${t("oneLess")}">−</button><output>${q}</output><button type="button" data-inc="${p.id}" aria-label="${t("oneMore")}" ${q >= p.stock ? "disabled" : ""}>+</button></div>`;
+function stepper(k, q) {
+  return `<div class="stepper"><button type="button" data-dec="${esc(k)}" aria-label="${t("oneLess")}">−</button><output>${q}</output><button type="button" data-inc="${esc(k)}" aria-label="${t("oneMore")}" ${q >= stockOf(k) ? "disabled" : ""}>+</button></div>`;
 }
-function control(p) {
-  const q = cart[p.id] || 0;
+function control(k) {
+  const q = cart[k] || 0;
+  if (!(stockOf(k) > 0)) return `<button class="add" type="button" disabled>${t("soldOut")}</button>`;
+  return q ? stepper(k, q) : `<button class="add" type="button" data-inc="${esc(k)}">${t("add")}</button>`;
+}
+// On a card, a part with options opens its page so the customer picks one first.
+function cardControl(p) {
+  if (!hasOpts(p)) return control(p.id);
   if (!(p.stock > 0)) return `<button class="add" type="button" disabled>${t("soldOut")}</button>`;
-  return q ? stepper(p, q) : `<button class="add" type="button" data-inc="${p.id}">${t("add")}</button>`;
+  return `<button class="add" type="button" data-open="${p.id}">${t("choose")}</button>`;
 }
-function stockText(p) {
-  if (!(p.stock > 0)) return `<div class="stock low">${t("soldOut")}</div>`;
-  return `<div class="stock ${p.stock <= 3 ? "low" : ""}">${p.stock <= 3 ? t("onlyLeft", p.stock) : t("inStock", p.stock)}</div>`;
+function stockText(n) {
+  if (!(n > 0)) return `<div class="stock low">${t("soldOut")}</div>`;
+  return `<div class="stock ${n <= 3 ? "low" : ""}">${n <= 3 ? t("onlyLeft", n) : t("inStock", n)}</div>`;
+}
+const camera = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+function overlays(p) {
+  return `<span class="tag ${p.category === "dji" ? "dji" : ""}">${esc(catLabel(p.category))}</span>` +
+    (!(p.stock > 0) ? `<span class="soldout-tag">${t("soldOut")}</span>` : "");
 }
 function thumb(p) {
-  return `<span class="tag ${p.category === "dji" ? "dji" : ""}">${esc(catLabel(p.category))}</span>` +
-    (p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : iconFor(p.category)) +
-    (!(p.stock > 0) ? `<span class="soldout-tag">${t("soldOut")}</span>` : "");
+  return overlays(p) + (p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : iconFor(p.category)) +
+    (p.photoCount > 0 ? `<span class="pcount">${camera}${p.photoCount + 1}</span>` : "");
 }
 
 function renderGrid() {
   const ql = query.trim().toLowerCase();
   const list = PRODUCTS.filter(p => (cat === "all" || p.category === cat) &&
-    (!ql || [p.name, ...(p.specs || []), p.description || "", catLabel(p.category)].join(" ").toLowerCase().includes(ql)));
+    (!ql || [p.name, ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category)].join(" ").toLowerCase().includes(ql)));
   if (!PRODUCTS.length) { $("#grid").innerHTML = `<p class="empty">${t("empty")}</p>`; return; }
   if (!list.length) { $("#grid").innerHTML = `<p class="empty">${t("noMatch", esc(query))}</p>`; return; }
   $("#grid").innerHTML = list.map(p => `<article class="card">
@@ -103,28 +112,82 @@ function renderGrid() {
       <div class="body">
         <h3 dir="auto"><button type="button" data-open="${p.id}">${esc(p.name)}</button></h3>
         <div class="specs">${(p.specs || []).map(s => `<span>${esc(s)}</span>`).join("")}</div>
-        <div class="row"><div><div class="price">${money(p.price)}</div>${stockText(p)}</div>${control(p)}</div>
+        <div class="row"><div><div class="price">${money(p.price)}</div>${stockText(p.stock)}</div>${cardControl(p)}</div>
       </div></article>`).join("");
 }
 
-function openDetail(id) {
+// ───────── Part page: photo gallery + option picker ─────────
+const photoCache = {};
+const chosen = {}; // productId → selected optionId
+
+async function photosOf(p) {
+  if (!p.image) return [];
+  if (!(p.photoCount > 0) || !configured) return [p.image];
+  if (!photoCache[p.id]) {
+    photoCache[p.id] = getDocs(collection(db, "products", p.id, "photos"))
+      .then(s => [p.image, ...s.docs.map(d => d.data()).sort((a, b) => a.i - b.i).map(x => x.data)])
+      .catch(e => { console.warn(e); delete photoCache[p.id]; return [p.image]; });
+  }
+  return photoCache[p.id];
+}
+
+function galleryHTML(p, photos) {
+  if (photos.length < 2) return `<div class="thumb">${thumb(p)}</div>`;
+  return `<div class="gallery">${overlays(p)}
+    <div class="slides" id="gSlides">${photos.map((src, i) => `<div class="slide"><img src="${esc(src)}" alt="${esc(t("photo", i + 1))}" ${i ? 'loading="lazy"' : ""}></div>`).join("")}</div>
+    <button class="gnav prev" type="button" data-g="-1" aria-label="${t("prevPhoto")}">‹</button>
+    <button class="gnav next" type="button" data-g="1" aria-label="${t("nextPhoto")}">›</button>
+    <div class="dots">${photos.map((_, i) => `<button type="button" data-dot="${i}" aria-label="${esc(t("photo", i + 1))}" ${i ? "" : 'aria-current="true"'}></button>`).join("")}</div>
+  </div>`;
+}
+const slideIndex = el => Math.round(Math.abs(el.scrollLeft) / el.clientWidth);
+function goSlide(i) {
+  const el = $("#gSlides"); if (!el) return;
+  const s = el.children[Math.max(0, Math.min(el.children.length - 1, i))];
+  el.scrollBy({ left: s.getBoundingClientRect().left - el.getBoundingClientRect().left, behavior: "smooth" });
+}
+
+function buyHTML(p) {
+  let k = p.id, stock = p.stock;
+  let opts = "";
+  if (hasOpts(p)) {
+    let sel = p.options.find(o => o.id === chosen[p.id]) || p.options.find(o => o.stock > 0) || p.options[0];
+    chosen[p.id] = sel.id; k = keyOf(p, sel); stock = sel.stock;
+    opts = `<div class="opts" role="group" aria-label="${esc(t("pickOption"))}"><span class="note">${t("pickOption")}</span>
+      ${p.options.map(o => `<button type="button" class="opt" data-opt="${esc(o.id)}" aria-pressed="${o.id === sel.id}" ${o.stock > 0 ? "" : "disabled"}>${esc(o.label)}${o.stock > 0 ? "" : ` · ${t("soldOut")}`}</button>`).join("")}</div>`;
+  }
+  return `${opts}<div class="row"><div><div class="price">${money(p.price)}</div>${stockText(stock)}</div><div>${control(k)}</div></div>`;
+}
+
+async function openDetail(id, keepGallery) {
   const p = byId[id]; if (!p) return;
   const d = $("#detail");
+  if (keepGallery && d.dataset.id === id && !d.hidden) { $("#dBuy").innerHTML = buyHTML(p); return; }
   d.dataset.id = id;
   d.innerHTML = `<div class="sheet-head"><h2 id="dTitle" dir="auto">${esc(p.name)}</h2><button class="x" type="button" data-close aria-label="${t("close")}">✕</button></div>
     <div class="d-body">
-      <div class="thumb">${thumb(p)}</div>
+      <div id="dGallery">${galleryHTML(p, p.image ? [p.image] : [])}</div>
       <div class="specs">${(p.specs || []).map(s => `<span>${esc(s)}</span>`).join("")}</div>
       ${p.description ? `<p dir="auto">${esc(p.description)}</p>` : ""}
-      <div class="row"><div><div class="price">${money(p.price)}</div>${stockText(p)}</div><div data-ctl="${p.id}">${control(p)}</div></div>
+      <div id="dBuy" class="buy">${buyHTML(p)}</div>
     </div>`;
   d.hidden = false; $("#scrim").hidden = false;
   d.querySelector("[data-close]").focus();
+  const photos = await photosOf(p);
+  if (photos.length > 1 && d.dataset.id === id && !d.hidden) {
+    $("#dGallery").innerHTML = galleryHTML(p, photos);
+    const el = $("#gSlides");
+    el.addEventListener("scroll", () => {
+      const i = slideIndex(el);
+      d.querySelectorAll("[data-dot]").forEach(b => b.toggleAttribute("aria-current", +b.dataset.dot === i));
+    }, { passive: true });
+  }
 }
 
+// ───────── Cart + checkout ─────────
 function totals() {
   let items = 0, sum = 0;
-  for (const id in cart) { items += cart[id]; sum += cart[id] * byId[id].price; }
+  for (const k in cart) { items += cart[k]; sum += cart[k] * parseKey(k).p.price; }
   return { items, sum };
 }
 
@@ -134,10 +197,8 @@ const newOrderNo = () => "PW-" + Date.now().toString(36).slice(-5).toUpperCase()
 function message() {
   const { sum } = totals();
   if (!orderNo) orderNo = newOrderNo();
-  const lines = Object.keys(cart).map((id, i) => {
-    const p = byId[id]; return `${i + 1}. ${p.name} × ${cart[id]} = ${money(p.price * cart[id])}`;
-  });
-  const name = $("#cName").value.trim(), phone = $("#cPhone").value.trim(), city = cityName(), note = $("#cNote").value.trim();
+  const lines = Object.keys(cart).map((k, i) => `${i + 1}. ${itemName(k)} × ${cart[k]} = ${money(parseKey(k).p.price * cart[k])}`);
+  const name = $("#cName").value.trim(), phone = $("#cPhone").value.trim(), city = $("#cCity").value.trim(), note = $("#cNote").value.trim();
   const details = [name && `${t("mName")}: ${name}`, phone && `${t("mPhone")}: ${phone}`, city && `${t("mCity")}: ${city}`, note && `${t("mNotes")}: ${note}`].filter(Boolean);
   const out = [t("hello", S.name, orderNo), "", ...lines, "", `${t("total")}: ${money(sum)}`];
   if (details.length) out.push("", ...details);
@@ -150,10 +211,10 @@ function renderCart() {
   $("#barCount").textContent = items;
   $("#barTotal").textContent = money(sum);
   $("#sumTotal").textContent = money(sum);
-  $("#lines").innerHTML = items ? Object.keys(cart).map(id => {
-    const p = byId[id], q = cart[id];
-    return `<div class="line"><div class="n"><bdi>${esc(p.name)}</bdi><div class="s">${t("each", money(p.price))}</div></div><div class="p">${money(p.price * q)}</div>
-      <div class="ctl">${stepper(p, q)}<button class="rm" type="button" data-rm="${id}">${t("remove")}</button></div></div>`;
+  $("#lines").innerHTML = items ? Object.keys(cart).map(k => {
+    const p = parseKey(k).p, q = cart[k];
+    return `<div class="line"><div class="n"><bdi>${esc(itemName(k))}</bdi><div class="s">${t("each", money(p.price))}</div></div><div class="p">${money(p.price * q)}</div>
+      <div class="ctl">${stepper(k, q)}<button class="rm" type="button" data-rm="${esc(k)}">${t("remove")}</button></div></div>`;
   }).join("") : `<p class="note" style="padding-top:16px">${t("cartEmpty")}</p>`;
   updateLink();
   if (!items) closeCart();
@@ -165,13 +226,12 @@ function updateLink() {
   $("#waBtn").href = `https://wa.me/${S.whatsapp}?text=${encodeURIComponent(msg)}`;
 }
 
-function setQty(id, q) {
-  const p = byId[id]; if (!p) return;
-  q = Math.max(0, Math.min(p.stock || 0, q));
-  if (q) cart[id] = q; else delete cart[id];
+function setQty(k, q) {
+  const { p, ok } = parseKey(k); if (!ok) return;
+  q = Math.max(0, Math.min(stockOf(k), q));
+  if (q) cart[k] = q; else delete cart[k];
   saveCart(); renderGrid(); renderCart();
-  const slot = document.querySelector(`[data-ctl="${id}"]`);
-  if (slot) slot.innerHTML = control(p);
+  if (!$("#detail").hidden && $("#detail").dataset.id === p.id) openDetail(p.id, true);
 }
 
 function openCart() { $("#detail").hidden = true; $("#sheet").hidden = false; $("#scrim").hidden = false; $("#closeCart").focus(); }
@@ -179,13 +239,16 @@ function closeCart() { $("#sheet").hidden = true; if ($("#detail").hidden) $("#s
 function closeAll() { $("#sheet").hidden = true; $("#detail").hidden = true; $("#scrim").hidden = true; }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-inc],[data-dec],[data-rm],[data-cat],[data-open],[data-close]");
+  const t = e.target.closest("[data-inc],[data-dec],[data-rm],[data-cat],[data-open],[data-close],[data-opt],[data-g],[data-dot]");
   if (!t) return;
   if (t.dataset.inc) setQty(t.dataset.inc, (cart[t.dataset.inc] || 0) + 1);
   else if (t.dataset.dec) setQty(t.dataset.dec, (cart[t.dataset.dec] || 0) - 1);
   else if (t.dataset.rm) setQty(t.dataset.rm, 0);
   else if (t.dataset.cat) { cat = t.dataset.cat; renderCats(); renderGrid(); }
   else if (t.dataset.open) openDetail(t.dataset.open);
+  else if (t.dataset.opt) { const id = $("#detail").dataset.id; chosen[id] = t.dataset.opt; openDetail(id, true); }
+  else if (t.dataset.g) goSlide(slideIndex($("#gSlides")) + Number(t.dataset.g));
+  else if (t.dataset.dot) goSlide(+t.dataset.dot);
   else if (t.hasAttribute("data-close")) closeAll();
 });
 document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => {
@@ -201,16 +264,19 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeAll(); 
 $("#form").addEventListener("submit", e => e.preventDefault());
 
 $("#waBtn").addEventListener("click", e => {
-  const bad = !$("#cName").value.trim() ? ["cName", "nameErr"] : !phoneOk($("#cPhone").value) ? ["cPhone", "phoneErr"] : !$("#cCity").value ? ["cCity", "cityErr"] : null;
+  const bad = !$("#cName").value.trim() ? ["cName", "nameErr"] : !phoneOk($("#cPhone").value) ? ["cPhone", "phoneErr"] : !$("#cCity").value.trim() ? ["cCity", "cityErr"] : null;
   if (bad) { e.preventDefault(); $("#err").textContent = t(bad[1]); $("#err").hidden = false; $("#" + bad[0]).focus(); return; }
   // Save a copy of the order for the admin app. WhatsApp opens regardless of whether this succeeds.
   if (configured) {
     const { sum } = totals();
     addDoc(collection(db, "orders"), {
       number: orderNo,
-      items: Object.keys(cart).map(id => ({ id, name: byId[id].name, price: byId[id].price, qty: cart[id] })),
+      items: Object.keys(cart).map(k => {
+        const { p, o } = parseKey(k);
+        return { id: p.id, ...(o ? { option: o.id } : {}), name: itemName(k), price: p.price, qty: cart[k] };
+      }),
       total: sum,
-      customer: { name: $("#cName").value.trim().slice(0, 120), phone: $("#cPhone").value.trim().slice(0, 30), city: cityName().slice(0, 120), note: $("#cNote").value.trim().slice(0, 1000) },
+      customer: { name: $("#cName").value.trim().slice(0, 120), phone: $("#cPhone").value.trim().slice(0, 30), city: $("#cCity").value.trim().slice(0, 120), note: $("#cNote").value.trim().slice(0, 1000) },
       status: "new",
       createdAt: serverTimestamp()
     }).catch(err => console.warn("Order not saved", err));

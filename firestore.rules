@@ -16,6 +16,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    // Extra photos of a part (the cover photo is on the part itself).
+    match /products/{id}/photos/{photo} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
 
     // Orders: customers can only create a new order in the expected shape.
     // Only admins can read, update or delete orders.
