@@ -226,7 +226,7 @@ $("#scrim").addEventListener("click", closeEditor);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeEditor(); });
 
 // Watermark stamped onto every newly uploaded photo (Settings → Watermark): the logo mark and the
-// store name, small and repeated across the whole photo at 50% opacity, so it can't be cropped out
+// store name, small and repeated across the whole photo at 30% opacity, so it can't be cropped out
 // and the photo can't be reused. The mark is drawn with canvas paths rather than from the SVG file, so the canvas never
 // counts as "tainted" and can always be saved.
 function drawMark(x, px, py, size) {
@@ -250,10 +250,10 @@ async function watermark(x, w, h) {
   const stamp = mark + gap + x.measureText(text).width;
   const dx = stamp * 1.6, dy = mark * 3.2, r = Math.hypot(w, h) / 2;
   x.save();
-  x.globalAlpha = 0.5;
+  x.globalAlpha = 0.3;
   x.translate(w / 2, h / 2); x.rotate(-Math.PI / 9);
   x.textBaseline = "middle"; x.lineJoin = "round";
-  x.lineWidth = Math.max(1.5, fs * 0.12); x.strokeStyle = "rgba(10,15,20,.8)"; x.fillStyle = "#fff";
+  x.lineWidth = Math.max(1.2, fs * 0.1); x.strokeStyle = "rgba(10,15,20,.6)"; x.fillStyle = "#fff";
   // Staggered rows that cover the whole (rotated) photo.
   for (let row = 0, y = -r; y <= r; y += dy, row++) {
     for (let px = -r - (row % 2 ? dx / 2 : 0); px <= r; px += dx) {
