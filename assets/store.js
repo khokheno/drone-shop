@@ -21,7 +21,8 @@ function parseKey(k) {
   return { p, o, ok: !!p && (oid ? !!o : !hasOpts(p)) };
 }
 const stockOf = k => { const { p, o } = parseKey(k); return (o ? o.stock : p?.stock) || 0; };
-const itemName = k => { const { p, o } = parseKey(k); return o ? `${p.name} — ${o.label}` : p.name; };
+const isUsed = p => p.condition === "used";
+const itemName = k => { const { p, o } = parseKey(k); return (o ? `${p.name} — ${o.label}` : p.name) + (isUsed(p) ? ` (${t("used")})` : ""); };
 
 async function load() {
   if (!configured) {
@@ -57,6 +58,8 @@ function renderAll() {
   applyStatic();
   $("#tagline").textContent = settingText("tagline", S.tagline);
   $("#introText").textContent = settingText("intro", S.intro);
+  // The default footer says every part is new; once used parts are listed, say each one is marked.
+  if (PRODUCTS.some(isUsed)) document.querySelector("footer.site").textContent = t("footerMixed");
   renderCats(); renderGrid(); renderCart();
 }
 
@@ -94,6 +97,7 @@ function stockText(n) {
 const camera = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 function overlays(p) {
   return `<span class="tag ${p.category === "dji" ? "dji" : ""}">${esc(catLabel(p.category))}</span>` +
+    (isUsed(p) ? `<span class="used-tag">${t("used")}</span>` : "") +
     (!(p.stock > 0) ? `<span class="soldout-tag">${t("soldOut")}</span>` : "");
 }
 function thumb(p) {
@@ -104,7 +108,7 @@ function thumb(p) {
 function renderGrid() {
   const ql = query.trim().toLowerCase();
   const list = PRODUCTS.filter(p => (cat === "all" || p.category === cat) &&
-    (!ql || [p.name, ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category)].join(" ").toLowerCase().includes(ql)));
+    (!ql || [p.name, isUsed(p) ? t("used") + " used" : "", ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category)].join(" ").toLowerCase().includes(ql)));
   if (!PRODUCTS.length) { $("#grid").innerHTML = `<p class="empty">${t("empty")}</p>`; return; }
   if (!list.length) { $("#grid").innerHTML = `<p class="empty">${t("noMatch", esc(query))}</p>`; return; }
   $("#grid").innerHTML = list.map(p => `<article class="card">
@@ -277,7 +281,7 @@ $("#waBtn").addEventListener("click", e => {
       number: orderNo,
       items: Object.keys(cart).map(k => {
         const { p, o } = parseKey(k);
-        return { id: p.id, ...(o ? { option: o.id } : {}), name: itemName(k), price: p.price, qty: cart[k] };
+        return { id: p.id, ...(o ? { option: o.id } : {}), ...(isUsed(p) ? { used: true } : {}), name: itemName(k), price: p.price, qty: cart[k] };
       }),
       subtotal: sum, shipping, total,
       customer: { name: $("#cName").value.trim().slice(0, 120), phone: $("#cPhone").value.trim().slice(0, 30), city: $("#cCity").value.trim().slice(0, 120), address: $("#cAddr").value.trim().slice(0, 200), note: $("#cNote").value.trim().slice(0, 1000) },

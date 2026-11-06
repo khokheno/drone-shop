@@ -68,7 +68,7 @@
         <input id="pSearch" type="search" placeholder="Search parts" aria-label="Search parts">
         <select id="pCat" aria-label="Filter by category"></select>
         <select id="pShow" aria-label="Filter by status">
-          <option value="all">All</option><option value="low">Low stock (≤3)</option><option value="out">Sold out</option><option value="hidden">Hidden</option>
+          <option value="all">All</option><option value="low">Low stock (≤3)</option><option value="out">Sold out</option><option value="hidden">Hidden</option><option value="used">Used</option>
         </select>
         <span class="spacer"></span>
         <button class="ghost" type="button" id="importBtn">Import CSV</button>
@@ -146,6 +146,7 @@
     </div>
     <label for="eSpecs">Specs <em>separate with commas</em><input id="eSpecs" placeholder="2207, 1950KV, 6S, 5&quot;"></label>
     <label for="eDesc">Description <em>(optional)</em><textarea id="eDesc" rows="4" maxlength="3000" placeholder="Compatibility, what's in the box, condition…"></textarea></label>
+    <label for="eCond">Condition<select id="eCond"><option value="new">New</option><option value="used">Used</option></select></label>
     <label class="check" for="eVisible"><input id="eVisible" type="checkbox" checked> Show in shop</label>
     <span class="err" id="eErr" hidden></span>
     <div class="savebar">
@@ -161,7 +162,7 @@
 <aside class="sheet wide" id="importer" hidden role="dialog" aria-modal="true" aria-labelledby="iTitle">
   <div class="sheet-head"><h2 id="iTitle">Import parts from CSV</h2><button class="x" type="button" data-closeim aria-label="Close">✕</button></div>
   <div class="sheet-body form">
-    <p class="note">Export a sheet from Excel, Numbers or Google Sheets as CSV. First row must be headers. Columns: <code>name</code>, <code>category</code>, <code>price</code>, <code>stock</code>, <code>specs</code> (separated by <code>;</code> or <code>|</code>), <code>description</code>. Only <code>name</code> and <code>price</code> are required. Unknown categories are added automatically.</p>
+    <p class="note">Export a sheet from Excel, Numbers or Google Sheets as CSV. First row must be headers. Columns: <code>name</code>, <code>category</code>, <code>price</code>, <code>stock</code>, <code>specs</code> (separated by <code>;</code> or <code>|</code>), <code>description</code>, <code>condition</code> (<code>new</code> or <code>used</code>; empty means new). Only <code>name</code> and <code>price</code> are required. Unknown categories are added automatically.</p>
     <label class="ghost filebtn" for="iFile">Choose CSV file<input id="iFile" type="file" accept=".csv,text/csv"></label>
     <label for="iText">…or paste CSV here<textarea id="iText" rows="6" placeholder="name,category,price,stock,specs&#10;2207 Motor 1950KV,Motors,85,12,2207;1950KV;6S"></textarea></label>
     <div id="iPreview" class="note"></div>

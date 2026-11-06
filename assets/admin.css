@@ -43,6 +43,7 @@ code{font-family:var(--f-mono);font-size:.92em;background:var(--chip);padding:1p
 .pill.low{background:var(--signal-bg);border-color:var(--signal);color:var(--fg)}
 .pill.out{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .pill.hid{border-style:dashed}
+.pill.used{background:var(--signal);border-color:var(--signal);color:#16202b}
 @media (max-width:640px){
   .prow{grid-template-columns:48px minmax(0,1fr) auto;row-gap:8px}
   .prow .pt{width:48px;height:48px}

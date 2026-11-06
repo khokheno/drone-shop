@@ -110,7 +110,7 @@ function renderParts() {
   const q = $("#pSearch").value.trim().toLowerCase(), c = $("#pCat").value, f = $("#pShow").value;
   const list = products.filter(p =>
     (c === "all" || p.category === c) &&
-    (f === "all" || (f === "low" && p.stock > 0 && p.stock <= 3) || (f === "out" && !(p.stock > 0)) || (f === "hidden" && p.visible === false)) &&
+    (f === "all" || (f === "low" && p.stock > 0 && p.stock <= 3) || (f === "out" && !(p.stock > 0)) || (f === "hidden" && p.visible === false) || (f === "used" && p.condition === "used")) &&
     (!q || [p.name, ...(p.specs || [])].join(" ").toLowerCase().includes(q)));
 
   if (!products.length) {
@@ -122,7 +122,7 @@ function renderParts() {
   }
   if (!list.length) { $("#pList").innerHTML = `<p class="empty">No parts match these filters.</p>`; return; }
   $("#pList").innerHTML = list.map(p => {
-    const pill = p.visible === false ? `<span class="pill hid">Hidden</span>` : !(p.stock > 0) ? `<span class="pill out">Sold out</span>` : p.stock <= 3 ? `<span class="pill low">Low</span>` : "";
+    const pill = (p.condition === "used" ? `<span class="pill used">Used</span> ` : "") + (p.visible === false ? `<span class="pill hid">Hidden</span>` : !(p.stock > 0) ? `<span class="pill out">Sold out</span>` : p.stock <= 3 ? `<span class="pill low">Low</span>` : "");
     return `<div class="prow ${p.visible === false ? "off" : ""}">
       <div class="pt">${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : iconFor(p.category)}</div>
       <div class="pn"><b>${esc(p.name)}</b><small>${esc(catLabel(p.category))}${(p.specs || []).length ? " · " + esc(p.specs.join(" · ")) : ""}</small> ${pill}</div>
@@ -184,6 +184,7 @@ async function openEditor(p) {
   $("#ePrice").value = p?.price ?? "";
   $("#eStock").value = p?.stock ?? 1;
   $("#eSort").value = p?.sort ?? 0;
+  $("#eCond").value = p?.condition === "used" ? "used" : "new";
   $("#eSpecs").value = (p?.specs || []).join(", ");
   $("#eDesc").value = p?.description || "";
   $("#eVisible").checked = p ? p.visible !== false : true;
@@ -290,6 +291,7 @@ $("#eForm").addEventListener("submit", async e => {
   b.set(ref, {
     name, price, stock, options,
     category: $("#eCat").value,
+    condition: $("#eCond").value,
     sort: parseInt($("#eSort").value, 10) || 0,
     specs: $("#eSpecs").value.split(/[,;|]/).map(s => s.trim()).filter(Boolean).slice(0, 12),
     description: $("#eDesc").value.trim(),
@@ -528,7 +530,7 @@ function preview() {
   if (rows.length < 2) { $("#iPreview").textContent = ""; $("#iGo").disabled = true; return; }
   const h = rows[0].map(x => x.trim().toLowerCase());
   const col = k => h.findIndex(x => x === k || x.startsWith(k));
-  const ix = { name: col("name"), category: col("cat"), price: col("price"), stock: Math.max(col("stock"), col("qty"), col("quantity")), specs: col("spec"), description: col("desc") };
+  const ix = { name: col("name"), category: col("cat"), price: col("price"), stock: Math.max(col("stock"), col("qty"), col("quantity")), specs: col("spec"), description: col("desc"), condition: Math.max(col("cond"), col("used")) };
   if (ix.name < 0 || ix.price < 0) { err.textContent = "The first row needs at least a “name” and a “price” column."; err.hidden = false; $("#iGo").disabled = true; return; }
   let bad = 0;
   for (const r of rows.slice(1)) {
@@ -538,6 +540,7 @@ function preview() {
       name, price,
       stock: ix.stock >= 0 ? Math.max(0, parseInt(r[ix.stock], 10) || 0) : 1,
       catLabel: ix.category >= 0 ? (r[ix.category] || "").trim() : "",
+      condition: ix.condition >= 0 && /^(used|yes|true|1|مستعمل|משומש)$/i.test((r[ix.condition] || "").trim()) ? "used" : "new",
       specs: ix.specs >= 0 ? (r[ix.specs] || "").split(/[;|]/).map(s => s.trim()).filter(Boolean) : [],
       description: ix.description >= 0 ? (r[ix.description] || "").trim() : ""
     });
@@ -562,7 +565,7 @@ $("#iGo").addEventListener("click", async () => {
       const b = writeBatch(db);
       parsed.slice(i, i + 400).forEach((p, j) => b.set(doc(collection(db, "products")), {
         name: p.name, price: p.price, stock: p.stock, category: resolve(p.catLabel), specs: p.specs.slice(0, 12),
-        description: p.description, image: "", visible: true, sort: products.length + i + j, updatedAt: serverTimestamp()
+        description: p.description, condition: p.condition, image: "", visible: true, sort: products.length + i + j, updatedAt: serverTimestamp()
       }));
       await b.commit();
     }

@@ -43,6 +43,7 @@ Open http://localhost:8080 (shop) and http://localhost:8080/admin/ (admin). Sign
 ## Using the admin
 - **Parts**: add/edit with photo, price, stock, specs, description; tap −/+ to change stock; Hide removes a part from the shop without deleting it.
 - **Import CSV**: export your spreadsheet as CSV (see `sample-parts.csv`). Specs are separated by `;`.
+- **Condition**: every part is *New* or *Used* (editor → Condition). Used parts get a “مستعمل / משומש / Used” badge in the shop, and the word is added to the item name in the cart, WhatsApp message and order. The admin list has a *Used* filter, and CSV import reads an optional `condition` column.
 - **Photos**: up to 6 per part. The first is the cover in the shop grid; the rest are loaded only when a customer opens the part, where they can swipe through them.
 - **Options**: for parts that come in variants (CW / CCW, colours), add options in the editor, each with its own stock. Customers must pick one; the part's stock is the total of its options.
 - **Orders**: every WhatsApp checkout is also saved here with an order number (e.g. `PW-3K9QZ`) that appears in the customer's WhatsApp message, with the customer's name, phone and city.
