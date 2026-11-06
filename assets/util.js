@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS = {
   intro: "Fill your cart, then send the order to us on WhatsApp. We confirm stock and arrange payment and delivery in the chat.",
   whatsapp: "972515100532",
   currency: "₪",
+  shipping: 70,
   categories: [
     { id: "dji", label: "DJI" },
     { id: "motors", label: "Motors" },

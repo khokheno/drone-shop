@@ -95,6 +95,8 @@ header.site{position:sticky;top:0;z-index:20;background:var(--surface);border-bo
 .line .p{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:end}
 .line .ctl{display:flex;gap:10px;align-items:center}
 .rm{border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;padding:0}
+.subrows{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+.subrows div{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
 .sum{display:flex;justify-content:space-between;font-family:var(--f-display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .form{display:flex;flex-direction:column;gap:12px}
 .form label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500}

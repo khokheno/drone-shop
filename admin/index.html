@@ -7,7 +7,7 @@
 <title>Shop Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=IBM+Plex+Sans+Hebrew:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="../assets/admin.css">
 </head>
@@ -99,11 +99,23 @@
           <label for="sWa">WhatsApp number <em>country code + number, digits only</em><input id="sWa" inputmode="numeric" placeholder="972515100532"></label>
           <label for="sCur">Currency symbol<input id="sCur" maxlength="4"></label>
         </div>
+        <label for="sShip">Shipping cost <em>added to every order; 0 for free shipping</em><input id="sShip" type="number" min="0" step="1" inputmode="numeric"></label>
         <h2>Categories</h2>
         <p class="note">The order here is the order customers see. Renaming keeps parts in the category.</p>
         <div id="catRows" class="cats-edit"></div>
         <button class="ghost" type="button" id="addCat">+ Add category</button>
         <div class="savebar"><span class="note" id="sMsg"></span><button class="primary" type="submit">Save settings</button></div>
+        <h2>Shipping labels</h2>
+        <p class="note">These are saved on this device only, so your phone and computer can use different printers. Labels print through the normal print dialog: pick your network printer there (AirPrint on iPhone and Mac).</p>
+        <div class="two">
+          <label for="lSize">Label size<select id="lSize">
+            <option value="100x150">100 × 150 mm (4 × 6 in) label</option>
+            <option value="a6">A6 (105 × 148 mm)</option>
+            <option value="a4">A4 sheet (label in the corner)</option>
+          </select></label>
+          <label class="check" for="lAuto" style="align-self:end"><input id="lAuto" type="checkbox"> Print the label when I mark an order Pending</label>
+        </div>
+        <button class="ghost" type="button" id="lTest">Print a test label</button>
       </form>
     </section>
   </main>
@@ -159,6 +171,7 @@
 </aside>
 
 <div class="toast" id="toast" role="status" hidden></div>
+<div id="printArea" aria-hidden="true"></div>
 
 <script type="module" src="../assets/admin.js"></script>
 </body>

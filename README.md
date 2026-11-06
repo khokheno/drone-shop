@@ -50,7 +50,8 @@ Open http://localhost:8080 (shop) and http://localhost:8080/admin/ (admin). Sign
   - *Mark sold* makes it final (and takes the stock out if it wasn't held yet).
   - *Cancel* (or deleting) a pending order puts the stock back. Deleting a sold order leaves stock as it is.
   - Nothing changes stock at checkout itself: until you mark an order pending, its parts can still be bought by someone else.
-- **Settings**: store name, headline, WhatsApp number, currency, and categories.
+- **Settings**: store name, headline, WhatsApp number, currency, shipping cost (₪70 by default, added to every order), and categories.
+- **Shipping labels**: every order has *🖨 Print label*, and by default the label also opens when you mark an order *Pending*. It prints a 100 × 150 mm (4 × 6 in) label with the customer's name, phone, address, city, order number and contents, through the normal print dialog: choose your network printer there (AirPrint on iPhone/Mac). Label size (100 × 150, A6 or A4) and auto-print are set per device under Settings → Shipping labels, with a test-label button.
 
 ## Languages
 The shop opens in **Arabic** by default, with Hebrew and English in the switcher at the top. Each visitor's choice is remembered.

@@ -105,3 +105,29 @@ code{font-family:var(--f-mono);font-size:.92em;background:var(--chip);padding:1p
 .check input{width:auto!important}
 
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:60;box-shadow:var(--shadow);font-size:14px;max-width:calc(100% - 32px)}
+
+/* ───────── Shipping label (printed) ───────── */
+#printArea{display:none}
+.label{width:100mm;height:150mm;box-sizing:border-box;padding:5mm;display:flex;flex-direction:column;gap:3mm;color:#000;background:#fff;font-family:var(--f-body);overflow:hidden}
+.label .lh{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:.6mm solid #000;padding-bottom:2mm}
+.label .lh b{font-family:var(--f-display);font-size:14pt}
+.label .lh .no{font-family:var(--f-mono);font-size:15pt;font-weight:600;text-align:right}
+.label .lh small{display:block;font-size:8pt;font-weight:400}
+.label .k{font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;color:#000}
+.label .from{font-size:9pt}
+.label .to{border:.6mm solid #000;border-radius:2mm;padding:3mm;display:flex;flex-direction:column;gap:1mm}
+.label .to .nm{font-size:18pt;font-weight:700;line-height:1.15}
+.label .to .tel{font-family:var(--f-mono);font-size:14pt;font-weight:600}
+.label .to .ad{font-size:13pt;line-height:1.25}
+.label .to .ct{font-size:20pt;font-weight:700;line-height:1.1}
+.label .items{font-size:8.5pt;line-height:1.35;flex:1;overflow:hidden}
+.label .items div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label .note-l{font-size:8.5pt;border-top:.3mm dashed #000;padding-top:1.5mm}
+.label .lf{display:flex;justify-content:space-between;align-items:flex-end;border-top:.6mm solid #000;padding-top:2mm;font-size:9pt}
+.label .lf .big{font-family:var(--f-mono);font-size:22pt;font-weight:700;letter-spacing:.04em}
+@media print{
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block!important}
+  html,body{background:#fff!important}
+  .label{break-after:page}
+}

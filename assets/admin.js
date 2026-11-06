@@ -345,12 +345,13 @@ function renderOrders() {
       btn("primary", `data-oact="sold"`, "Mark sold · final");
       btn("ghost", `data-oact="cancel"`, o.stockApplied ? "Cancel · return stock" : "Cancel");
     } else if (o.status === "cancelled" && !o.stockApplied) btn("ghost", `data-oact="reopen"`, "Reopen");
+    if (o.status !== "cancelled") btn("ghost", `data-print`, "🖨 Print label");
     btn("ghost", `data-oact="delete"`, "Delete");
     const note = o.stockApplied ? (o.status === "done" ? "Sold · stock taken out." : "Stock is held for this order.") : "";
     return `<article class="order s-${esc(o.status)}">
       <div class="oh"><b>${esc(o.number || o.id.slice(0, 6))}</b><span class="st ${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span><span class="note">${fmtDate(o.createdAt)}</span><span class="t">${money(o.total)}</span></div>
-      <div class="who">${esc(c.name || "—")}${c.phone ? ` <span>· <a href="tel:${esc(c.phone)}" dir="ltr">${esc(c.phone)}</a></span>` : ""}${c.city ? ` <span>· ${esc(c.city)}</span>` : ""}${c.note ? `<br><span>“${esc(c.note)}”</span>` : ""}</div>
-      <table>${(o.items || []).map(i => `<tr><td>${esc(i.name)}</td><td class="n">× ${i.qty}</td><td class="n">${money(i.price * i.qty)}</td></tr>`).join("")}</table>
+      <div class="who">${esc(c.name || "—")}${c.phone ? ` <span>· <a href="tel:${esc(c.phone)}" dir="ltr">${esc(c.phone)}</a></span>` : ""}${c.city ? ` <span>· ${esc(c.city)}</span>` : ""}${c.address ? `<br><span dir="auto">${esc(c.address)}, ${esc(c.city || "")}</span>` : ""}${c.note ? `<br><span>“${esc(c.note)}”</span>` : ""}</div>
+      <table>${(o.items || []).map(i => `<tr><td>${esc(i.name)}</td><td class="n">× ${i.qty}</td><td class="n">${money(i.price * i.qty)}</td></tr>`).join("")}${o.shipping ? `<tr><td>Shipping</td><td></td><td class="n">${money(o.shipping)}</td></tr>` : ""}</table>
       ${note ? `<span class="note">${note}</span>` : ""}
       <div class="oa">${acts.join("")}</div></article>`;
   }).join("");
@@ -406,14 +407,63 @@ document.addEventListener("click", async e => {
     }
     await b.commit();
     toast(missing.length ? `${msg}. Not in catalog anymore: ${missing.join(", ")}` : msg);
+    if (act === "hold" && labelPrefs().auto) printLabel(o);
   } catch (ex) { fail(ex, "Order"); }
 });
+
+// ───────── Shipping labels ─────────
+// Printed through the browser's print dialog, so any printer the phone or computer can reach works
+// (AirPrint, network printers, label printers with a driver). Size and auto-print are per device.
+const PAGE = { "100x150": "size:100mm 150mm;margin:0", a6: "size:A6;margin:0", a4: "size:A4;margin:10mm" };
+function labelPrefs() {
+  let size = "100x150", auto = true;
+  try { size = localStorage.getItem("pw_label_size") || size; auto = localStorage.getItem("pw_label_auto") !== "0"; } catch {}
+  return { size: PAGE[size] ? size : "100x150", auto };
+}
+function labelHTML(o) {
+  const c = o.customer || {}, items = o.items || [], shown = items.slice(0, 9);
+  const pieces = items.reduce((n, i) => n + (i.qty || 0), 0);
+  const date = o.createdAt?.toDate ? o.createdAt.toDate() : new Date();
+  return `<div class="label">
+    <div class="lh"><div><b>${esc(S.name)}</b><small class="from">${esc("+" + (S.whatsapp || ""))}</small></div>
+      <div class="no">${esc(o.number || o.id.slice(0, 6))}<small>${date.toLocaleDateString("en-GB")}</small></div></div>
+    <div class="to"><span class="k">To · אל · إلى</span>
+      <span class="nm" dir="auto">${esc(c.name || "—")}</span>
+      ${c.phone ? `<span class="tel" dir="ltr">${esc(c.phone)}</span>` : ""}
+      ${c.address ? `<span class="ad" dir="auto">${esc(c.address)}</span>` : ""}
+      <span class="ct" dir="auto">${esc(c.city || "")}</span></div>
+    <div class="items"><span class="k">Contents · ${pieces} pcs</span>
+      ${shown.map(i => `<div dir="auto">${i.qty} × ${esc(i.name)}</div>`).join("")}
+      ${items.length > shown.length ? `<div>+ ${items.length - shown.length} more</div>` : ""}</div>
+    ${c.note ? `<div class="note-l" dir="auto">${esc(c.note.slice(0, 160))}</div>` : ""}
+    <div class="lf"><span>${esc(S.name)} · ${esc("+" + (S.whatsapp || ""))}</span><span class="big">${esc(o.number || "")}</span></div>
+  </div>`;
+}
+function printLabel(o) {
+  $("#printArea").innerHTML = labelHTML(o);
+  let st = $("#pageSize");
+  if (!st) { st = document.createElement("style"); st.id = "pageSize"; document.head.append(st); }
+  st.textContent = `@media print{@page{${PAGE[labelPrefs().size]}}}`;
+  // Give the browser a moment to lay out the label (and load fonts) before the dialog opens.
+  document.fonts.ready.then(() => setTimeout(() => window.print(), 50));
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-print]"); if (!b) return;
+  const o = orders.find(x => x.id === b.dataset.oid); if (o) printLabel(o);
+});
+$("#lSize").addEventListener("change", e => { try { localStorage.setItem("pw_label_size", e.target.value); } catch {} });
+$("#lAuto").addEventListener("change", e => { try { localStorage.setItem("pw_label_auto", e.target.checked ? "1" : "0"); } catch {} });
+$("#lTest").addEventListener("click", () => printLabel({
+  id: "test", number: "PW-TEST1", items: [{ name: "2207 Freestyle Motor 1950KV", qty: 4 }, { name: "Propeller Mounting Plate Kit — CW", qty: 1 }],
+  customer: { name: "خالد سباعي", phone: "050-123-4567", address: "شارع الجبل 12", city: "حيفا", note: "" }
+}));
 
 // ───────── Settings ─────────
 let catDraft = [];
 function fillSettingsForm() {
   $("#sName").value = S.name; $("#sTag").value = S.tagline || ""; $("#sIntro").value = S.intro || "";
-  $("#sWa").value = S.whatsapp || ""; $("#sCur").value = S.currency || "₪";
+  $("#sWa").value = S.whatsapp || ""; $("#sCur").value = S.currency || "₪"; $("#sShip").value = S.shipping ?? 70;
+  const lp = labelPrefs(); $("#lSize").value = lp.size; $("#lAuto").checked = lp.auto;
   catDraft = S.categories.map(c => ({ ...c }));
   renderCats();
 }
@@ -444,7 +494,7 @@ $("#sForm").addEventListener("submit", async e => {
   if (wa.length < 8) { $("#sMsg").textContent = "Enter the WhatsApp number with country code, e.g. 972515100532."; return; }
   const next = {
     name: $("#sName").value.trim(), tagline: $("#sTag").value.trim(), intro: $("#sIntro").value.trim(),
-    whatsapp: wa, currency: $("#sCur").value.trim() || "₪",
+    whatsapp: wa, currency: $("#sCur").value.trim() || "₪", shipping: Math.max(0, parseFloat($("#sShip").value) || 0),
     categories: catDraft.map(c => ({ id: c.id, label: c.label.trim() || c.id }))
   };
   try { await setDoc(doc(db, "settings", "store"), next); S = next; applySettings(); $("#sMsg").textContent = ""; toast("Settings saved"); }

@@ -185,32 +185,36 @@ async function openDetail(id, keepGallery) {
 }
 
 // ───────── Cart + checkout ─────────
+// Shipping is one flat price per order for now (Settings → Shipping); later it can depend on the city.
 function totals() {
   let items = 0, sum = 0;
   for (const k in cart) { items += cart[k]; sum += cart[k] * parseKey(k).p.price; }
-  return { items, sum };
+  const shipping = items ? Number(S.shipping) || 0 : 0;
+  return { items, sum, shipping, total: sum + shipping };
 }
 
 let orderNo = null;
 const newOrderNo = () => "PW-" + Date.now().toString(36).slice(-5).toUpperCase();
 
 function message() {
-  const { sum } = totals();
+  const { sum, shipping, total } = totals();
   if (!orderNo) orderNo = newOrderNo();
   const lines = Object.keys(cart).map((k, i) => `${i + 1}. ${itemName(k)} × ${cart[k]} = ${money(parseKey(k).p.price * cart[k])}`);
-  const name = $("#cName").value.trim(), phone = $("#cPhone").value.trim(), city = $("#cCity").value.trim(), note = $("#cNote").value.trim();
-  const details = [name && `${t("mName")}: ${name}`, phone && `${t("mPhone")}: ${phone}`, city && `${t("mCity")}: ${city}`, note && `${t("mNotes")}: ${note}`].filter(Boolean);
-  const out = [t("hello", S.name, orderNo), "", ...lines, "", `${t("total")}: ${money(sum)}`];
+  const name = $("#cName").value.trim(), phone = $("#cPhone").value.trim(), city = $("#cCity").value.trim(), addr = $("#cAddr").value.trim(), note = $("#cNote").value.trim();
+  const details = [name && `${t("mName")}: ${name}`, phone && `${t("mPhone")}: ${phone}`, city && `${t("mCity")}: ${city}`, addr && `${t("mAddress")}: ${addr}`, note && `${t("mNotes")}: ${note}`].filter(Boolean);
+  const out = [t("hello", S.name, orderNo), "", ...lines, "", `${t("subtotal")}: ${money(sum)}`, `${t("shipping")}: ${money(shipping)}`, `${t("total")}: ${money(total)}`];
   if (details.length) out.push("", ...details);
   return out.join("\n");
 }
 
 function renderCart() {
-  const { items, sum } = totals();
+  const { items, sum, shipping, total } = totals();
   $("#bar").hidden = items === 0;
   $("#barCount").textContent = items;
   $("#barTotal").textContent = money(sum);
-  $("#sumTotal").textContent = money(sum);
+  $("#subTotal").textContent = money(sum);
+  $("#shipCost").textContent = money(shipping);
+  $("#sumTotal").textContent = money(total);
   $("#lines").innerHTML = items ? Object.keys(cart).map(k => {
     const p = parseKey(k).p, q = cart[k];
     return `<div class="line"><div class="n"><bdi>${esc(itemName(k))}</bdi><div class="s">${t("each", money(p.price))}</div></div><div class="p">${money(p.price * q)}</div>
@@ -260,23 +264,23 @@ $("#openCart").addEventListener("click", openCart);
 $("#closeCart").addEventListener("click", closeCart);
 $("#scrim").addEventListener("click", closeAll);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeAll(); });
-["cName", "cPhone", "cCity", "cNote"].forEach(id => $("#" + id).addEventListener("input", () => { $("#err").hidden = true; updateLink(); }));
+["cName", "cPhone", "cCity", "cAddr", "cNote"].forEach(id => $("#" + id).addEventListener("input", () => { $("#err").hidden = true; updateLink(); }));
 $("#form").addEventListener("submit", e => e.preventDefault());
 
 $("#waBtn").addEventListener("click", e => {
-  const bad = !$("#cName").value.trim() ? ["cName", "nameErr"] : !phoneOk($("#cPhone").value) ? ["cPhone", "phoneErr"] : !$("#cCity").value.trim() ? ["cCity", "cityErr"] : null;
+  const bad = !$("#cName").value.trim() ? ["cName", "nameErr"] : !phoneOk($("#cPhone").value) ? ["cPhone", "phoneErr"] : !$("#cCity").value.trim() ? ["cCity", "cityErr"] : !$("#cAddr").value.trim() ? ["cAddr", "addressErr"] : null;
   if (bad) { e.preventDefault(); $("#err").textContent = t(bad[1]); $("#err").hidden = false; $("#" + bad[0]).focus(); return; }
   // Save a copy of the order for the admin app. WhatsApp opens regardless of whether this succeeds.
   if (configured) {
-    const { sum } = totals();
+    const { sum, shipping, total } = totals();
     addDoc(collection(db, "orders"), {
       number: orderNo,
       items: Object.keys(cart).map(k => {
         const { p, o } = parseKey(k);
         return { id: p.id, ...(o ? { option: o.id } : {}), name: itemName(k), price: p.price, qty: cart[k] };
       }),
-      total: sum,
-      customer: { name: $("#cName").value.trim().slice(0, 120), phone: $("#cPhone").value.trim().slice(0, 30), city: $("#cCity").value.trim().slice(0, 120), note: $("#cNote").value.trim().slice(0, 1000) },
+      subtotal: sum, shipping, total,
+      customer: { name: $("#cName").value.trim().slice(0, 120), phone: $("#cPhone").value.trim().slice(0, 30), city: $("#cCity").value.trim().slice(0, 120), address: $("#cAddr").value.trim().slice(0, 200), note: $("#cNote").value.trim().slice(0, 1000) },
       status: "new",
       createdAt: serverTimestamp()
     }).catch(err => console.warn("Order not saved", err));
