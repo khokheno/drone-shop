@@ -83,9 +83,9 @@
     <section id="tOrders" hidden>
       <div class="toolbar">
         <select id="oShow" aria-label="Filter orders">
-          <option value="open">Open (new + pending)</option><option value="new">New</option><option value="pending">Pending</option><option value="done">Sold</option><option value="cancelled">Cancelled</option><option value="all">All</option>
+          <option value="open">Open (new, pending, to restock)</option><option value="new">New</option><option value="pending">Pending</option><option value="done">Sold</option><option value="cancelled">Cancelled</option><option value="restock">To restock</option><option value="returned">Returned</option><option value="all">All</option>
         </select>
-        <span class="note">Orders are saved when a customer taps “Send order on WhatsApp”. Match them by order number in the chat. <b>Pending</b> takes the stock out right away; <b>Mark sold</b> makes it final; cancelling a pending order puts the stock back.</span>
+        <span class="note">Orders are saved when a customer taps “Send order on WhatsApp”. Match them by order number in the chat. <b>Pending</b> takes the stock out right away; <b>Mark sold</b> makes it final; cancelling a pending order puts the stock back. Deleting a sold order moves it to <b>To restock</b> so you can put the items back.</span>
       </div>
       <div id="oList" class="olist"></div>
     </section>

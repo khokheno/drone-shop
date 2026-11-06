@@ -365,11 +365,12 @@ $("#eDelete").addEventListener("click", async () => {
 // ───────── Orders ─────────
 // New → Pending takes the stock out right away so the shop can't oversell it.
 // Pending → Sold is final. Pending → Cancelled (or deleting a pending order) puts the stock back.
-// stockApplied on an order means its quantities are currently out of stock.
+// Deleting a sold order doesn't erase it: it moves to "To restock" (stock still out) until the items
+// are put back, either by the app or by hand. stockApplied on an order means its quantities are currently out of stock.
 $("#oShow").addEventListener("input", renderOrders);
 const fmtDate = ts => ts?.toDate ? ts.toDate().toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "just now";
-const STATUS = { new: "New", pending: "Pending", confirmed: "Confirmed", done: "Sold", cancelled: "Cancelled" };
-const OPEN = ["new", "pending", "confirmed"];
+const STATUS = { new: "New", pending: "Pending", confirmed: "Confirmed", done: "Sold", cancelled: "Cancelled", restock: "To restock", returned: "Returned" };
+const OPEN = ["new", "pending", "confirmed", "restock"];
 
 function renderOrders() {
   const n = orders.filter(o => o.status === "new").length;
@@ -388,9 +389,15 @@ function renderOrders() {
       btn("primary", `data-oact="sold"`, "Mark sold · final");
       btn("ghost", `data-oact="cancel"`, o.stockApplied ? "Cancel · return stock" : "Cancel");
     } else if (o.status === "cancelled" && !o.stockApplied) btn("ghost", `data-oact="reopen"`, "Reopen");
-    if (o.status !== "cancelled") btn("ghost", `data-print`, "🖨 Print label");
-    btn("ghost", `data-oact="delete"`, "Delete");
-    const note = o.stockApplied ? (o.status === "done" ? "Sold · stock taken out." : "Stock is held for this order.") : "";
+    else if (o.status === "restock") {
+      btn("primary", `data-oact="restock"`, "Put back in stock");
+      btn("ghost", `data-oact="restocked"`, "I restocked by hand");
+    }
+    if (["new", "pending", "confirmed", "done"].includes(o.status)) btn("ghost", `data-print`, "🖨 Print label");
+    btn("ghost", `data-oact="delete"`, o.status === "done" ? "Delete sale" : o.status === "restock" ? "Delete for good" : "Delete");
+    const note = o.status === "restock" ? "Sale deleted · these items are still out of stock. Put them back when you have them."
+      : o.status === "returned" ? "Items are back in stock."
+      : o.stockApplied ? (o.status === "done" ? "Sold · stock taken out." : "Stock is held for this order.") : "";
     return `<article class="order s-${esc(o.status)}">
       <div class="oh"><b>${esc(o.number || o.id.slice(0, 6))}</b><span class="st ${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span><span class="note">${fmtDate(o.createdAt)}</span><span class="t">${money(o.total)}</span></div>
       <div class="who">${esc(c.name || "—")}${c.phone ? ` <span>· <a href="tel:${esc(c.phone)}" dir="ltr">${esc(c.phone)}</a></span>` : ""}${c.city ? ` <span>· ${esc(c.city)}</span>` : ""}${c.address ? `<br><span dir="auto">${esc(c.address)}, ${esc(c.city || "")}</span>` : ""}${c.note ? `<br><span>“${esc(c.note)}”</span>` : ""}</div>
@@ -428,7 +435,8 @@ document.addEventListener("click", async e => {
   const o = orders.find(x => x.id === t.dataset.oid), act = t.dataset.oact, ref = doc(db, "orders", o.id);
   try {
     if (act === "delete" && !armedDel.has(o.id)) {
-      armedDel.add(o.id); t.textContent = "Tap again to delete"; t.classList.add("danger");
+      armedDel.add(o.id); t.classList.add("danger");
+      t.textContent = o.status === "done" ? "Tap again · moves to To restock" : "Tap again to delete";
       setTimeout(() => { armedDel.delete(o.id); renderOrders(); }, 4000); return;
     }
     const b = writeBatch(db);
@@ -441,11 +449,18 @@ document.addEventListener("click", async e => {
     } else if (act === "cancel") {
       if (o.stockApplied) missing = stockChanges(b, o, 1);
       b.update(ref, { status: "cancelled", stockApplied: false }); msg = o.stockApplied ? "Cancelled · stock returned" : "Order cancelled";
+    } else if (act === "restock") {
+      if (o.stockApplied) missing = stockChanges(b, o, 1);
+      b.update(ref, { status: "returned", stockApplied: false }); msg = "Items put back in stock";
+    } else if (act === "restocked") {
+      b.update(ref, { status: "returned", stockApplied: false }); msg = "Marked as restocked";
+    } else if (act === "delete" && o.status === "done") {
+      b.update(ref, { status: "restock" }); msg = "Sale deleted · items are in To restock";
     } else if (act === "reopen") {
       b.update(ref, { status: "new" }); msg = "Order reopened";
     } else if (act === "delete") {
-      // A pending order's held stock goes back; a sold order's stays out.
-      if (o.stockApplied && o.status !== "done") missing = stockChanges(b, o, 1);
+      // A pending order's held stock goes back; a deleted sale's stays out (it's in To restock until handled).
+      if (o.stockApplied && o.status !== "restock") missing = stockChanges(b, o, 1);
       b.delete(ref); msg = "Order deleted";
     }
     await b.commit();

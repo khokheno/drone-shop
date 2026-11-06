@@ -50,7 +50,7 @@ Open http://localhost:8080 (shop) and http://localhost:8080/admin/ (admin). Sign
 - **Orders**: every WhatsApp checkout is also saved here with an order number (e.g. `PW-3K9QZ`) that appears in the customer's WhatsApp message, with the customer's name, phone and city.
   - *Pending · hold stock* takes the quantities out of stock right away, so the shop can't sell them twice.
   - *Mark sold* makes it final (and takes the stock out if it wasn't held yet).
-  - *Cancel* (or deleting) a pending order puts the stock back. Deleting a sold order leaves stock as it is.
+  - *Cancel* (or deleting) a pending order puts the stock back. Deleting a sold order moves it to *To restock* (its stock stays out) until you tap *Put back in stock* (adds it back) or *I restocked by hand* (just marks it done); either way it ends up as *Returned*.
   - Nothing changes stock at checkout itself: until you mark an order pending, its parts can still be bought by someone else.
 - **Settings**: store name, headline, WhatsApp number, currency, shipping cost (₪70 by default, added to every order), and categories.
 - **Shipping labels**: every order has *🖨 Print label*, and by default the label also opens when you mark an order *Pending*. It prints a 100 × 150 mm (4 × 6 in) label with the customer's name, phone, address, city, order number and contents, through the normal print dialog: choose your network printer there (AirPrint on iPhone/Mac). Label size (100 × 150, A6 or A4) and auto-print are set per device under Settings → Shipping labels, with a test-label button.

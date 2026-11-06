@@ -68,6 +68,9 @@ code{font-family:var(--f-mono);font-size:.92em;background:var(--chip);padding:1p
 .st.confirmed,.st.pending{border-color:var(--accent);color:var(--accent)}
 .order.s-pending{border-left:4px solid var(--accent)}
 .st.done{border-color:var(--ok);color:var(--ok)}
+.st.restock{background:var(--signal-bg);border-color:var(--danger);color:var(--danger)}
+.order.s-restock{border-left:4px solid var(--danger)}
+.st.returned{border-color:var(--ok);color:var(--ok)}
 .st.cancelled{text-decoration:line-through;color:var(--muted)}
 
 .settings{max-width:640px;padding-block:20px 80px}
