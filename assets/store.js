@@ -92,7 +92,8 @@ function cardControl(p) {
 }
 function stockText(n) {
   if (!(n > 0)) return `<div class="stock low">${t("soldOut")}</div>`;
-  return `<div class="stock ${n <= 3 ? "low" : ""}">${n <= 3 ? t("onlyLeft", n) : t("inStock", n)}</div>`;
+  // Customers only see the exact count when it runs low.
+  return `<div class="stock ${n <= 3 ? "low" : ""}">${n <= 3 ? t("onlyLeft", n) : t("inStock")}</div>`;
 }
 const camera = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 function overlays(p) {
