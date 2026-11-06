@@ -105,6 +105,11 @@ function thumb(p) {
     (p.photoCount > 0 ? `<span class="pcount">${camera}${p.photoCount + 1}</span>` : "");
 }
 
+// Cards show the first few specs; the part page shows them all (and search uses them all).
+const CARD_SPECS = 3;
+const cardSpecs = specs => specs.slice(0, CARD_SPECS).map(s => `<span dir="auto">${esc(s)}</span>`).join("") +
+  (specs.length > CARD_SPECS ? `<span class="more" dir="ltr">+${specs.length - CARD_SPECS}</span>` : "");
+
 function renderGrid() {
   const ql = query.trim().toLowerCase();
   const list = PRODUCTS.filter(p => (cat === "all" || p.category === cat) &&
@@ -115,7 +120,7 @@ function renderGrid() {
       <button class="thumb" type="button" data-open="${p.id}" aria-label="${esc(t("view", p.name))}">${thumb(p)}</button>
       <div class="body">
         <h3 dir="auto"><button type="button" data-open="${p.id}">${esc(p.name)}</button></h3>
-        <div class="specs">${(p.specs || []).map(s => `<span>${esc(s)}</span>`).join("")}</div>
+        <div class="specs">${cardSpecs(p.specs || [])}</div>
         <div class="row"><div><div class="price">${money(p.price)}</div>${stockText(p.stock)}</div>${cardControl(p)}</div>
       </div></article>`).join("");
 }
@@ -171,7 +176,7 @@ async function openDetail(id, keepGallery) {
   d.innerHTML = `<div class="sheet-head"><h2 id="dTitle" dir="auto">${esc(p.name)}</h2><button class="x" type="button" data-close aria-label="${t("close")}">✕</button></div>
     <div class="d-body">
       <div id="dGallery">${galleryHTML(p, p.image ? [p.image] : [])}</div>
-      <div class="specs">${(p.specs || []).map(s => `<span>${esc(s)}</span>`).join("")}</div>
+      <div class="specs">${(p.specs || []).map(s => `<span dir="auto">${esc(s)}</span>`).join("")}</div>
       ${p.description ? `<p dir="auto">${esc(p.description)}</p>` : ""}
       <div id="dBuy" class="buy">${buyHTML(p)}</div>
     </div>`;
