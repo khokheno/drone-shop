@@ -149,6 +149,13 @@
     </div>
     <label for="eSpecs">Specs <em>separate with commas</em><input id="eSpecs" placeholder="2207, 1950KV, 6S, 5&quot;"></label>
     <label for="eDesc">Description <em>(optional)</em><textarea id="eDesc" rows="4" maxlength="3000" placeholder="Compatibility, what's in the box, condition…"></textarea></label>
+    <details class="optbox trbox">
+      <summary><b>Translations</b> <em class="note">Arabic and Hebrew shown in the shop · empty fields show the English text. Update these when you change the English.</em></summary>
+      <label for="eName_ar">Name · Arabic<input id="eName_ar" dir="rtl" lang="ar" maxlength="200"></label>
+      <label for="eDesc_ar">Description · Arabic<textarea id="eDesc_ar" dir="rtl" lang="ar" rows="4" maxlength="4000"></textarea></label>
+      <label for="eName_he">Name · Hebrew<input id="eName_he" dir="rtl" lang="he" maxlength="200"></label>
+      <label for="eDesc_he">Description · Hebrew<textarea id="eDesc_he" dir="rtl" lang="he" rows="4" maxlength="4000"></textarea></label>
+    </details>
     <label for="eCond">Condition<select id="eCond"><option value="new">New</option><option value="used">Used</option></select></label>
     <label class="check" for="eVisible"><input id="eVisible" type="checkbox" checked> Show in shop</label>
     <span class="err" id="eErr" hidden></span>

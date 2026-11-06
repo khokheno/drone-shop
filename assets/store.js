@@ -1,6 +1,6 @@
 import { configured, db, collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from "./firebase.js";
 import { esc, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js";
-import { t, catName, settingText, setLang, applyStatic } from "./i18n.js";
+import { t, lang, catName, settingText, setLang, applyStatic } from "./i18n.js";
 
 const $ = s => document.querySelector(s);
 let S = { ...DEFAULT_SETTINGS };
@@ -22,7 +22,11 @@ function parseKey(k) {
 }
 const stockOf = k => { const { p, o } = parseKey(k); return (o ? o.stock : p?.stock) || 0; };
 const isUsed = p => p.condition === "used";
-const itemName = k => { const { p, o } = parseKey(k); return (o ? `${p.name} — ${o.label}` : p.name) + (isUsed(p) ? ` (${t("used")})` : ""); };
+// Name and description in the shop language when a translation is saved (p.tr.ar / p.tr.he), else as written.
+const nameOf = p => p.tr?.[lang]?.name || p.name;
+const descOf = p => p.tr?.[lang]?.description || p.description || "";
+// local: the customer's language for the cart; the order and WhatsApp message keep the name as written, so the owner can match it.
+const itemName = (k, local) => { const { p, o } = parseKey(k); const n = local ? nameOf(p) : p.name; return (o ? `${n} — ${o.label}` : n) + (isUsed(p) ? ` (${t("used")})` : ""); };
 
 async function load() {
   if (!configured) {
@@ -114,13 +118,13 @@ const cardSpecs = specs => specs.slice(0, CARD_SPECS).map(s => `<span dir="auto"
 function renderGrid() {
   const ql = query.trim().toLowerCase();
   const list = PRODUCTS.filter(p => (cat === "all" || p.category === cat) &&
-    (!ql || [p.name, isUsed(p) ? t("used") + " used" : "", ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category)].join(" ").toLowerCase().includes(ql)));
+    (!ql || [p.name, ...Object.values(p.tr || {}).flatMap(x => [x.name, x.description]), isUsed(p) ? t("used") + " used" : "", ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category)].join(" ").toLowerCase().includes(ql)));
   if (!PRODUCTS.length) { $("#grid").innerHTML = `<p class="empty">${t("empty")}</p>`; return; }
   if (!list.length) { $("#grid").innerHTML = `<p class="empty">${t("noMatch", esc(query))}</p>`; return; }
   $("#grid").innerHTML = list.map(p => `<article class="card">
-      <button class="thumb" type="button" data-open="${p.id}" aria-label="${esc(t("view", p.name))}">${thumb(p)}</button>
+      <button class="thumb" type="button" data-open="${p.id}" aria-label="${esc(t("view", nameOf(p)))}">${thumb(p)}</button>
       <div class="body">
-        <h3 dir="auto"><button type="button" data-open="${p.id}">${esc(p.name)}</button></h3>
+        <h3 dir="auto"><button type="button" data-open="${p.id}">${esc(nameOf(p))}</button></h3>
         <div class="specs">${cardSpecs(p.specs || [])}</div>
         <div class="row"><div><div class="price">${money(p.price)}</div>${stockText(p.stock)}</div>${cardControl(p)}</div>
       </div></article>`).join("");
@@ -174,11 +178,11 @@ async function openDetail(id, keepGallery) {
   const d = $("#detail");
   if (keepGallery && d.dataset.id === id && !d.hidden) { $("#dBuy").innerHTML = buyHTML(p); return; }
   d.dataset.id = id;
-  d.innerHTML = `<div class="sheet-head"><h2 id="dTitle" dir="auto">${esc(p.name)}</h2><button class="x" type="button" data-close aria-label="${t("close")}">✕</button></div>
+  d.innerHTML = `<div class="sheet-head"><h2 id="dTitle" dir="auto">${esc(nameOf(p))}</h2><button class="x" type="button" data-close aria-label="${t("close")}">✕</button></div>
     <div class="d-body">
       <div id="dGallery">${galleryHTML(p, p.image ? [p.image] : [])}</div>
       <div class="specs">${(p.specs || []).map(s => `<span dir="auto">${esc(s)}</span>`).join("")}</div>
-      ${p.description ? `<p dir="auto">${esc(p.description)}</p>` : ""}
+      ${descOf(p) ? `<p dir="auto">${esc(descOf(p))}</p>` : ""}
       <div id="dBuy" class="buy">${buyHTML(p)}</div>
     </div>`;
   d.hidden = false; $("#scrim").hidden = false;
@@ -227,7 +231,7 @@ function renderCart() {
   $("#sumTotal").textContent = money(total);
   $("#lines").innerHTML = items ? Object.keys(cart).map(k => {
     const p = parseKey(k).p, q = cart[k];
-    return `<div class="line"><div class="n"><bdi>${esc(itemName(k))}</bdi><div class="s">${t("each", money(p.price))}</div></div><div class="p">${money(p.price * q)}</div>
+    return `<div class="line"><div class="n"><bdi>${esc(itemName(k, true))}</bdi><div class="s">${t("each", money(p.price))}</div></div><div class="p">${money(p.price * q)}</div>
       <div class="ctl">${stepper(k, q)}<button class="rm" type="button" data-rm="${esc(k)}">${t("remove")}</button></div></div>`;
   }).join("") : `<p class="note" style="padding-top:16px">${t("cartEmpty")}</p>`;
   updateLink();

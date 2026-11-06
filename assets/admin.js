@@ -122,7 +122,7 @@ function renderParts() {
   }
   if (!list.length) { $("#pList").innerHTML = `<p class="empty">No parts match these filters.</p>`; return; }
   $("#pList").innerHTML = list.map(p => {
-    const pill = (p.condition === "used" ? `<span class="pill used">Used</span> ` : "") + (p.visible === false ? `<span class="pill hid">Hidden</span>` : !(p.stock > 0) ? `<span class="pill out">Sold out</span>` : p.stock <= 3 ? `<span class="pill low">Low</span>` : "");
+    const pill = (p.condition === "used" ? `<span class="pill used">Used</span> ` : "") + (p.tr?.ar?.name && p.tr?.he?.name ? "" : `<span class="pill hid">Not translated</span> `) + (p.visible === false ? `<span class="pill hid">Hidden</span>` : !(p.stock > 0) ? `<span class="pill out">Sold out</span>` : p.stock <= 3 ? `<span class="pill low">Low</span>` : "");
     return `<div class="prow ${p.visible === false ? "off" : ""}">
       <div class="pt">${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : iconFor(p.category)}</div>
       <div class="pn"><b>${esc(p.name)}</b><small>${esc(catLabel(p.category))}${(p.specs || []).length ? " · " + esc(p.specs.join(" · ")) : ""}</small> ${pill}</div>
@@ -174,6 +174,8 @@ async function loadSamples() {
 // The cover photo lives on the part itself (the shop grid needs only that); the other photos are
 // stored one per document in products/{id}/photos and loaded when a customer opens the part.
 const MAX_PHOTOS = 6;
+// Arabic and Hebrew name/description (p.tr.ar, p.tr.he). Empty means the shop shows the English text.
+const TR_LANGS = ["ar", "he"];
 let editing = null, photos = [], opts = [];
 async function openEditor(p) {
   editing = p; photos = p?.image ? [p.image] : [];
@@ -187,6 +189,7 @@ async function openEditor(p) {
   $("#eCond").value = p?.condition === "used" ? "used" : "new";
   $("#eSpecs").value = (p?.specs || []).join(", ");
   $("#eDesc").value = p?.description || "";
+  for (const l of TR_LANGS) { $(`#eName_${l}`).value = p?.tr?.[l]?.name || ""; $(`#eDesc_${l}`).value = p?.tr?.[l]?.description || ""; }
   $("#eVisible").checked = p ? p.visible !== false : true;
   $("#eDelete").hidden = !p; disarm();
   $("#eErr").hidden = true;
@@ -336,6 +339,7 @@ $("#eForm").addEventListener("submit", async e => {
     sort: parseInt($("#eSort").value, 10) || 0,
     specs: $("#eSpecs").value.split(/[,;|]/).map(s => s.trim()).filter(Boolean).slice(0, 12),
     description: $("#eDesc").value.trim(),
+    tr: Object.fromEntries(TR_LANGS.map(l => [l, { name: $(`#eName_${l}`).value.trim(), description: $(`#eDesc_${l}`).value.trim() }])),
     visible: $("#eVisible").checked,
     image: photos[0] || "",
     photoCount: newCount,

@@ -98,6 +98,9 @@ code{font-family:var(--f-mono);font-size:.92em;background:var(--chip);padding:1p
 .ph.loading{color:var(--muted);font-size:12px}
 .optbox{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
 .optbox em{font-style:normal}
+.trbox summary{cursor:pointer}
+.trbox[open]{gap:12px}
+.trbox input,.trbox textarea{font-family:var(--f-body),"IBM Plex Sans Arabic","IBM Plex Sans Hebrew",sans-serif}
 .optrow{display:grid;grid-template-columns:minmax(0,1fr) 90px 36px;gap:6px}
 .optrow input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px;width:100%}
 .optrow button{border:1px solid var(--line);background:transparent;border-radius:8px}
