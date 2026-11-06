@@ -225,6 +225,35 @@ $$("[data-closeed]").forEach(b => b.addEventListener("click", closeEditor));
 $("#scrim").addEventListener("click", closeEditor);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeEditor(); });
 
+// Watermark stamped onto every newly uploaded photo (Settings → Watermark): the logo mark and the
+// store name in a translucent pill at the bottom corner. The mark is drawn with canvas paths rather
+// than from the SVG file, so the canvas never counts as "tainted" and can always be saved.
+function drawMark(x, px, py, size) {
+  x.save(); x.translate(px, py); x.scale(size / 64, size / 64);
+  x.fillStyle = "#1f5fd6"; x.beginPath(); x.roundRect(0, 0, 64, 64, 14); x.fill();
+  x.strokeStyle = "#fff"; x.lineCap = "round"; x.lineWidth = 3.5;
+  x.beginPath(); x.moveTo(25, 25); x.lineTo(39, 39); x.moveTo(39, 25); x.lineTo(25, 39); x.stroke();
+  for (const [cx, cy] of [[18, 18], [46, 18], [18, 46], [46, 46]]) { x.beginPath(); x.arc(cx, cy, 9, 0, Math.PI * 2); x.stroke(); }
+  x.globalAlpha = .55; x.lineWidth = 3;
+  x.beginPath(); x.moveTo(12, 21); x.lineTo(24, 15); x.moveTo(40, 15); x.lineTo(52, 21); x.moveTo(12, 43); x.lineTo(24, 49); x.moveTo(40, 49); x.lineTo(52, 43); x.stroke();
+  x.globalAlpha = 1; x.fillStyle = "#fff"; x.beginPath(); x.roundRect(26, 26, 12, 12, 3); x.fill();
+  x.fillStyle = "#1f5fd6"; x.beginPath(); x.arc(32, 32, 2.4, 0, Math.PI * 2); x.fill();
+  x.restore();
+}
+async function watermark(x, w, h) {
+  try { await document.fonts.load('700 20px "Chakra Petch"'); } catch {}
+  const u = Math.sqrt(w * h) / 750, pad = 8 * u, mark = 28 * u, gap = 8 * u, margin = 14 * u;
+  x.font = `700 ${Math.round(19 * u)}px "Chakra Petch", "Arial Narrow", sans-serif`;
+  const text = S.name || "PropWash Parts", tw = x.measureText(text).width;
+  const bw = pad + mark + gap + tw + pad * 1.5, bh = mark + pad * 2;
+  const bx = w - bw - margin, by = h - bh - margin;
+  x.save();
+  x.fillStyle = "rgba(10,15,20,.5)"; x.beginPath(); x.roundRect(bx, by, bw, bh, bh / 2.4); x.fill();
+  drawMark(x, bx + pad, by + pad, mark);
+  x.fillStyle = "rgba(255,255,255,.95)"; x.textBaseline = "middle"; x.fillText(text, bx + pad + mark + gap, by + bh / 2 + u);
+  x.restore();
+}
+
 async function resizeImage(file) {
   const url = URL.createObjectURL(file);
   try {
@@ -233,6 +262,7 @@ async function resizeImage(file) {
     const w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
     const c = document.createElement("canvas"); c.width = w; c.height = h;
     const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+    if (S.watermark !== false) await watermark(x, w, h);
     let q = 0.82, data = c.toDataURL("image/jpeg", q);
     while (data.length > 200000 && q > 0.4) { q -= 0.08; data = c.toDataURL("image/jpeg", q); }
     return data;
@@ -464,7 +494,7 @@ $("#lTest").addEventListener("click", () => printLabel({
 let catDraft = [];
 function fillSettingsForm() {
   $("#sName").value = S.name; $("#sTag").value = S.tagline || ""; $("#sIntro").value = S.intro || "";
-  $("#sWa").value = S.whatsapp || ""; $("#sCur").value = S.currency || "₪"; $("#sShip").value = S.shipping ?? 70;
+  $("#sWa").value = S.whatsapp || ""; $("#sCur").value = S.currency || "₪"; $("#sShip").value = S.shipping ?? 70; $("#sMark").checked = S.watermark !== false;
   const lp = labelPrefs(); $("#lSize").value = lp.size; $("#lAuto").checked = lp.auto;
   catDraft = S.categories.map(c => ({ ...c }));
   renderCats();
@@ -496,7 +526,7 @@ $("#sForm").addEventListener("submit", async e => {
   if (wa.length < 8) { $("#sMsg").textContent = "Enter the WhatsApp number with country code, e.g. 972515100532."; return; }
   const next = {
     name: $("#sName").value.trim(), tagline: $("#sTag").value.trim(), intro: $("#sIntro").value.trim(),
-    whatsapp: wa, currency: $("#sCur").value.trim() || "₪", shipping: Math.max(0, parseFloat($("#sShip").value) || 0),
+    whatsapp: wa, currency: $("#sCur").value.trim() || "₪", shipping: Math.max(0, parseFloat($("#sShip").value) || 0), watermark: $("#sMark").checked,
     categories: catDraft.map(c => ({ id: c.id, label: c.label.trim() || c.id }))
   };
   try { await setDoc(doc(db, "settings", "store"), next); S = next; applySettings(); $("#sMsg").textContent = ""; toast("Settings saved"); }

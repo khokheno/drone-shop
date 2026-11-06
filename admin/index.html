@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=IBM+Plex+Sans+Hebrew:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="icon" href="../assets/brand/logo-mark.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="../assets/admin.css">
 </head>
@@ -48,7 +50,7 @@
   <header class="site">
     <div class="wrap top">
       <a class="brand" href="../" target="_blank" rel="noopener">
-        <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><circle cx="30" cy="10" r="6"/><circle cx="10" cy="30" r="6"/><circle cx="30" cy="30" r="6"/><path d="M14 14l12 12M26 14L14 26"/><rect x="16" y="16" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+        <img class="mark" src="../assets/brand/logo-mark.svg" alt="" width="36" height="36">
         <div><b id="aStore">Shop</b><small>Admin · view shop ↗</small></div>
       </a>
       <nav class="tabs" aria-label="Sections">
@@ -100,6 +102,7 @@
           <label for="sCur">Currency symbol<input id="sCur" maxlength="4"></label>
         </div>
         <label for="sShip">Shipping cost <em>added to every order; 0 for free shipping</em><input id="sShip" type="number" min="0" step="1" inputmode="numeric"></label>
+        <label class="check" for="sMark"><input id="sMark" type="checkbox" checked> Watermark new photos with the logo and store name</label>
         <h2>Categories</h2>
         <p class="note">The order here is the order customers see. Renaming keeps parts in the category.</p>
         <div id="catRows" class="cats-edit"></div>
@@ -128,7 +131,7 @@
   <form class="sheet-body form" id="eForm" novalidate>
     <div class="photos-box">
       <div class="photos" id="ePhotos"></div>
-      <span class="note">Up to 6 photos. The first one is the cover in the shop; use the arrows to reorder. Photos are resized automatically.</span>
+      <span class="note">Up to 6 photos. The first one is the cover in the shop; use the arrows to reorder. Photos are resized and watermarked automatically.</span>
     </div>
     <label for="eName">Name<input id="eName" required maxlength="140" placeholder="2207 Freestyle Motor 1950KV"></label>
     <div class="two">
