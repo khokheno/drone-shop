@@ -48,7 +48,8 @@ header.site{position:sticky;top:0;z-index:20;background:var(--surface);border-bo
 .cat{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:500;white-space:nowrap}
 .cat[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .cat span{font-family:var(--f-mono);font-size:11px;opacity:.65}
-.cat.zero{opacity:.45}
+.cat i{font-style:normal;font-size:11px;margin-inline-start:2px;opacity:.8}
+.rowlbl{flex:none;align-self:center;font-size:12px;color:var(--muted);padding-inline-end:2px}
 
 .intro{padding-block:28px 8px;display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
 .intro h1{font-family:var(--f-display);font-size:clamp(26px,4vw,38px);line-height:1.05;margin:0;text-wrap:balance;max-width:20ch}

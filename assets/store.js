@@ -82,9 +82,13 @@ const inModel = p => model === "all" || (p.models || []).includes(model);
 const brandsInUse = () => brands().filter(b => PRODUCTS.some(p => p.brand === b.id));
 const modelBrand = () => brand !== "all" ? brandOf(brand) : brandsInUse().length === 1 ? brandsInUse()[0] : null;
 
+// Choices with nothing left under the other filters are left out. A chosen brand or model shows ✕ and turns off with another tap.
 function chip(attr, id, label, n, on) {
-  return `<button class="cat${n || on ? "" : " zero"}" type="button" ${attr}="${esc(id)}" aria-pressed="${on}" dir="auto">${esc(label)}<span>${n}</span></button>`;
+  if (!n && !on) return "";
+  const x = on && id !== "all" && attr !== "data-cat" ? `<i aria-hidden="true">✕</i>` : "";
+  return `<button class="cat" type="button" ${attr}="${esc(id)}" aria-pressed="${on}" dir="auto">${esc(label)}<span>${n}</span>${x}</button>`;
 }
+const rowLabel = key => `<span class="rowlbl">${t(key)}:</span>`;
 // Each row counts what the other filters leave, so the numbers always match what a tap shows.
 // A row with only one choice is left out.
 function renderCats() {
@@ -100,13 +104,13 @@ function renderCats() {
 
   const inUse = brandsInUse(), forBrands = PRODUCTS.filter(inCat);
   $("#brands").hidden = inUse.length < 2;
-  $("#brands").innerHTML = inUse.length < 2 ? "" : chip("data-brand", "all", t("allBrands"), forBrands.length, brand === "all") +
+  $("#brands").innerHTML = inUse.length < 2 ? "" : rowLabel("brandsLabel") + chip("data-brand", "all", t("allBrands"), forBrands.length, brand === "all") +
     inUse.map(b => chip("data-brand", b.id, b.label, forBrands.filter(p => p.brand === b.id).length, b.id === brand)).join("");
 
   const mb = modelBrand(), forModels = PRODUCTS.filter(p => inCat(p) && p.brand === mb?.id);
   const models = (mb?.models || []).filter(m => PRODUCTS.some(p => p.brand === mb.id && (p.models || []).includes(m.id)));
   $("#models").hidden = models.length < 2;
-  $("#models").innerHTML = models.length < 2 ? "" : chip("data-model", "all", t("allModels", mb.label), forModels.length, model === "all") +
+  $("#models").innerHTML = models.length < 2 ? "" : rowLabel("modelsLabel") + chip("data-model", "all", t("allModels", mb.label), forModels.length, model === "all") +
     models.map(m => chip("data-model", m.id, m.label, forModels.filter(p => (p.models || []).includes(m.id)).length, m.id === model)).join("");
 }
 function syncURL() {
@@ -299,8 +303,8 @@ document.addEventListener("click", e => {
   else if (t.dataset.dec) setQty(t.dataset.dec, (cart[t.dataset.dec] || 0) - 1);
   else if (t.dataset.rm) setQty(t.dataset.rm, 0);
   else if (t.dataset.cat) { cat = t.dataset.cat; syncURL(); renderCats(); renderGrid(); }
-  else if (t.dataset.brand) { brand = t.dataset.brand; model = "all"; syncURL(); renderCats(); renderGrid(); }
-  else if (t.dataset.model) { model = t.dataset.model; syncURL(); renderCats(); renderGrid(); }
+  else if (t.dataset.brand) { brand = t.dataset.brand === brand ? "all" : t.dataset.brand; model = "all"; syncURL(); renderCats(); renderGrid(); }
+  else if (t.dataset.model) { model = t.dataset.model === model ? "all" : t.dataset.model; syncURL(); renderCats(); renderGrid(); }
   else if (t.dataset.open) openDetail(t.dataset.open);
   else if (t.dataset.opt) { const id = $("#detail").dataset.id; chosen[id] = t.dataset.opt; openDetail(id, true); }
   else if (t.dataset.g) goSlide(slideIndex($("#gSlides")) + Number(t.dataset.g));
