@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { firebaseConfig } from "./config.js?v=20261107183311";
+import { firebaseConfig } from "./config.js?v=20261107183742";
 
 export const configured = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("PASTE") && !!firebaseConfig.projectId;
 export const app = configured ? initializeApp(firebaseConfig) : null;
