@@ -1,6 +1,6 @@
-import { configured, db, collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from "./firebase.js";
-import { esc, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js";
-import { t, lang, catName, settingText, setLang, applyStatic } from "./i18n.js";
+import { configured, db, collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from "./firebase.js?v=20261107183311";
+import { esc, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js?v=20261107183311";
+import { t, lang, catName, settingText, setLang, applyStatic } from "./i18n.js?v=20261107183311";
 
 const $ = s => document.querySelector(s);
 let S = { ...DEFAULT_SETTINGS };

@@ -65,3 +65,7 @@ The headline, intro and default category names are translated automatically. If 
 ## Free-plan limits (good to know)
 Firestore free: 50,000 reads/day. Each shop visit reads every part once, so ~100 parts handles ~500 visits a day.
 Photos are resized to ~100–200 KB and stored inside each part (no paid Storage needed).
+
+## Deploying changes
+
+Before committing a change to the site, run `sh tools/stamp.sh`. It adds a version number to every script and stylesheet link, so phones never mix a new page with old cached files (GitHub Pages caches files for 10 minutes).

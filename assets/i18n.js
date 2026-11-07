@@ -1,5 +1,5 @@
 // Shop translations. Arabic is the default, then Hebrew, then English.
-import { DEFAULT_SETTINGS } from "./util.js";
+import { DEFAULT_SETTINGS } from "./util.js?v=20261107183311";
 
 export const LANGS = [
   { id: "ar", label: "عربي", dir: "rtl" },
