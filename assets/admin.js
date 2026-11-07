@@ -84,8 +84,12 @@ function applySettings() {
   const opts = S.categories.map(c => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join("");
   $("#pCat").innerHTML = `<option value="all">All categories</option>` + opts;
   $("#eCat").innerHTML = opts;
+  const bopts = brandList().map(b => `<option value="${esc(b.id)}">${esc(b.label)}</option>`).join("");
+  $("#pBrand").innerHTML = `<option value="all">All brands</option>` + bopts + `<option value="">No brand</option>`;
+  $("#eBrand").innerHTML = bopts + `<option value="">No brand / generic</option>`;
   fillSettingsForm();
 }
+const brandList = () => S.brands || [];
 const catLabel = id => (S.categories.find(c => c.id === id) || {}).label || id || "—";
 
 // ───────── Tabs ─────────
@@ -97,7 +101,7 @@ $$("[data-tab]").forEach(b => b.addEventListener("click", () => {
 }));
 
 // ───────── Parts list ─────────
-["#pSearch", "#pCat", "#pShow"].forEach(s => $(s).addEventListener("input", renderParts));
+["#pSearch", "#pCat", "#pBrand", "#pShow"].forEach(s => $(s).addEventListener("input", renderParts));
 // List order is remembered on this device. createdAt is set when a part is added (older parts were backfilled).
 const ms = ts => ts?.toMillis ? ts.toMillis() : Date.now(); // a part saved a moment ago has no server time yet
 const SORTS = {
@@ -120,9 +124,9 @@ function renderParts() {
   $("#stats").innerHTML = `<div><b>${products.length}</b><span>Parts</span></div><div><b>${units}</b><span>Units in stock</span></div>
     <div><b>${money(value)}</b><span>Stock value</span></div><div class="${low + out ? "warn" : ""}"><b>${low} / ${out}</b><span>Low / sold out</span></div>`;
 
-  const q = $("#pSearch").value.trim().toLowerCase(), c = $("#pCat").value, f = $("#pShow").value;
+  const q = $("#pSearch").value.trim().toLowerCase(), c = $("#pCat").value, br = $("#pBrand").value, f = $("#pShow").value;
   const list = products.filter(p =>
-    (c === "all" || p.category === c) &&
+    (c === "all" || p.category === c) && (br === "all" || (p.brand || "") === br) &&
     (f === "all" || (f === "low" && p.stock > 0 && p.stock <= 3) || (f === "out" && !(p.stock > 0)) || (f === "hidden" && p.visible === false) || (f === "used" && p.condition === "used")) &&
     (!q || [p.name, ...(p.specs || [])].join(" ").toLowerCase().includes(q))).sort(SORTS[$("#pSort").value] || SORTS.shop);
 
@@ -196,6 +200,8 @@ async function openEditor(p) {
   $("#eTitle").textContent = p ? "Edit part" : "Add part";
   $("#eName").value = p?.name || "";
   $("#eCat").value = p?.category || S.categories[0]?.id || "other";
+  $("#eBrand").value = p ? p.brand || "" : brandList()[0]?.id || "";
+  drawModels(p?.models || []);
   $("#ePrice").value = p?.price ?? "";
   $("#eStock").value = p?.stock ?? 1;
   $("#eSort").value = p?.sort ?? 0;
@@ -237,6 +243,14 @@ $("#ePhotos").addEventListener("click", e => {
   if (d) { photos.splice(+d.dataset.pdel, 1); drawPhotos(); }
 });
 $("#eCat").addEventListener("change", () => { if (!photos.length) drawPhotos(); });
+// Model tick boxes follow the chosen brand; ticks for models of another brand are dropped.
+function drawModels(sel) {
+  const ms = brandList().find(b => b.id === $("#eBrand").value)?.models || [];
+  $("#eModels").innerHTML = ms.length ? ms.map(m => `<label><input type="checkbox" value="${esc(m.id)}" ${sel.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("")
+    : `<span class="note">${$("#eBrand").value ? "No models yet. Add them in Settings." : "—"}</span>`;
+}
+const pickedModels = () => $$("#eModels input:checked").map(i => i.value);
+$("#eBrand").addEventListener("change", () => drawModels(pickedModels()));
 $$("[data-closeed]").forEach(b => b.addEventListener("click", closeEditor));
 $("#scrim").addEventListener("click", closeEditor);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeEditor(); });
@@ -348,6 +362,8 @@ $("#eForm").addEventListener("submit", async e => {
   b.set(ref, {
     name, price, stock, options,
     category: $("#eCat").value,
+    brand: $("#eBrand").value,
+    models: pickedModels(),
     condition: $("#eCond").value,
     sort: parseInt($("#eSort").value, 10) || 0,
     specs: $("#eSpecs").value.split(/[,;|]/).map(s => s.trim()).filter(Boolean).slice(0, 12),
@@ -541,8 +557,44 @@ function fillSettingsForm() {
   $("#sWa").value = S.whatsapp || ""; $("#sCur").value = S.currency || "₪"; $("#sShip").value = S.shipping ?? 70; $("#sMark").checked = S.watermark !== false;
   const lp = labelPrefs(); $("#lSize").value = lp.size; $("#lAuto").checked = lp.auto;
   catDraft = S.categories.map(c => ({ ...c }));
-  renderCats();
+  brandDraft = structuredClone(brandList());
+  renderCats(); renderBrands();
 }
+// Brands keep their id when renamed, so parts stay linked; same for each model.
+let brandDraft = [];
+function renderBrands() {
+  $("#brandRows").innerHTML = brandDraft.map((b, i) => {
+    const n = products.filter(p => p.brand === b.id).length;
+    return `<div class="brandbox"><div class="catrow bname">
+        <input id="br_${esc(b.id)}" value="${esc(b.label)}" data-bi="${i}" aria-label="Brand name">
+        <small title="parts for this brand">${n}</small>
+        <button type="button" data-delbrand="${i}" aria-label="Remove brand" ${n ? "disabled title='Change the brand on its parts first'" : ""}>✕</button></div>
+      ${(b.models || []).map((m, j) => {
+        const k = products.filter(p => p.brand === b.id && (p.models || []).includes(m.id)).length;
+        return `<div class="catrow mrow"><input id="md_${esc(m.id)}" value="${esc(m.label)}" data-bi="${i}" data-mi="${j}" aria-label="Model name">
+          <small title="parts that fit this model">${k}</small>
+          <button type="button" data-delmodel="${i}:${j}" aria-label="Remove model" ${k ? "disabled title='Untick it on its parts first'" : ""}>✕</button></div>`;
+      }).join("")}
+      <button class="linkish" type="button" data-addmodel="${i}">+ Add model</button></div>`;
+  }).join("");
+}
+$("#brandRows").addEventListener("input", e => {
+  const { bi, mi } = e.target.dataset; if (bi === undefined) return;
+  if (mi === undefined) brandDraft[bi].label = e.target.value; else brandDraft[bi].models[mi].label = e.target.value;
+});
+$("#brandRows").addEventListener("click", e => {
+  const db_ = e.target.closest("[data-delbrand]"), dm = e.target.closest("[data-delmodel]"), am = e.target.closest("[data-addmodel]");
+  if (db_) { brandDraft.splice(+db_.dataset.delbrand, 1); renderBrands(); }
+  if (dm) { const [i, j] = dm.dataset.delmodel.split(":").map(Number); brandDraft[i].models.splice(j, 1); renderBrands(); }
+  if (am) {
+    const b = brandDraft[+am.dataset.addmodel], id = "m-" + Date.now().toString(36);
+    (b.models ||= []).push({ id, label: "" }); renderBrands(); $(`#md_${id}`)?.focus();
+  }
+});
+$("#addBrand").addEventListener("click", () => {
+  const id = "b-" + Date.now().toString(36);
+  brandDraft.push({ id, label: "", models: [] }); renderBrands(); $(`#br_${id}`)?.focus();
+});
 function renderCats() {
   $("#catRows").innerHTML = catDraft.map((c, i) => {
     const n = products.filter(p => p.category === c.id).length;
@@ -571,7 +623,9 @@ $("#sForm").addEventListener("submit", async e => {
   const next = {
     name: $("#sName").value.trim(), tagline: $("#sTag").value.trim(), intro: $("#sIntro").value.trim(),
     whatsapp: wa, currency: $("#sCur").value.trim() || "₪", shipping: Math.max(0, parseFloat($("#sShip").value) || 0), watermark: $("#sMark").checked,
-    categories: catDraft.map(c => ({ id: c.id, label: c.label.trim() || c.id }))
+    categories: catDraft.map(c => ({ id: c.id, label: c.label.trim() || c.id })),
+    brands: brandDraft.filter(b => b.label.trim()).map(b => ({ id: b.id, label: b.label.trim(),
+      models: (b.models || []).filter(m => m.label.trim()).map(m => ({ id: m.id, label: m.label.trim() })) }))
   };
   try { await setDoc(doc(db, "settings", "store"), next); S = next; applySettings(); $("#sMsg").textContent = ""; toast("Settings saved"); }
   catch (ex) { fail(ex, "Settings"); }

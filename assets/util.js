@@ -9,28 +9,41 @@ export const DEFAULT_SETTINGS = {
   whatsapp: "972515100532",
   currency: "₪",
   shipping: 70,
+  // Part types. Brand (and the models it fits) is a separate filter, so one category can hold parts for any brand.
   categories: [
-    { id: "dji", label: "DJI" },
-    { id: "motors", label: "Motors" },
-    { id: "props", label: "Props" },
+    { id: "boards", label: "Boards & ESC" },
+    { id: "sensors", label: "Sensors, vision & GPS" },
+    { id: "body", label: "Body, antennas & lights" },
+    { id: "cables", label: "Flex & cables" },
+    { id: "motors", label: "Motors & props" },
+    { id: "remote", label: "Remote controller" },
+    { id: "gimbal", label: "Gimbal & camera" },
+    { id: "batteries", label: "Batteries & chargers" },
+    { id: "video", label: "Cameras & VTX" },
     { id: "frames", label: "Frames" },
     { id: "stack", label: "FC & ESC" },
-    { id: "video", label: "Cameras & VTX" },
     { id: "radio", label: "Receivers" },
-    { id: "batteries", label: "Batteries" },
     { id: "other", label: "Other" }
+  ],
+  // The drone brand a part is for, and that brand's models. Parts store the brand id and a list of model ids.
+  brands: [
+    { id: "dji", label: "DJI", models: [
+      { id: "p3", label: "Phantom 3" }, { id: "p4", label: "Phantom 4" }, { id: "p4pro", label: "Phantom 4 Pro" },
+      { id: "p4prov2", label: "Phantom 4 Pro V2.0" }, { id: "p4adv", label: "Phantom 4 Advanced" }, { id: "p4rtk", label: "Phantom 4 RTK" },
+      { id: "fpv", label: "FPV / O4" }
+    ] }
   ]
 };
 
 export const SAMPLE_PRODUCTS = [
   { cat:"motors", name:"2207 Freestyle Motor 1950KV", specs:["2207","1950KV","6S","5\""], price:85, stock:12 },
-  { cat:"props", name:"5.1×3 Tri-Blade Props, 2 sets", specs:["5.1\"","3-blade","T-mount"], price:18, stock:40 },
+  { cat:"motors", name:"5.1×3 Tri-Blade Props, 2 sets", specs:["5.1\"","3-blade","T-mount"], price:18, stock:40 },
   { cat:"frames", name:"5\" Freestyle Frame 225mm", specs:["225mm","5mm arms","30×30"], price:220, stock:5 },
   { cat:"stack", name:"F7 Flight Controller", specs:["F722","30×30","Betaflight"], price:210, stock:6 },
   { cat:"radio", name:"ExpressLRS 2.4GHz Receiver", specs:["ELRS","2.4GHz","nano"], price:60, stock:20 },
   { cat:"batteries", name:"6S 1300mAh LiPo", specs:["6S","1300mAh","XT60"], price:150, stock:10 },
-  { cat:"dji", name:"DJI Mini 4 Pro Propellers", specs:["Mini 4 Pro","2 pairs"], price:45, stock:15 },
-  { cat:"dji", name:"DJI O3 Air Unit", specs:["O3","4K/60","Digital"], price:890, stock:2 }
+  { cat:"motors", brand:"dji", name:"DJI Mini 4 Pro Propellers", specs:["Mini 4 Pro","2 pairs"], price:45, stock:15 },
+  { cat:"video", brand:"dji", models:["fpv"], name:"DJI O3 Air Unit", specs:["O3","4K/60","Digital"], price:890, stock:2 }
 ];
 
 export const ICONS = {
@@ -44,4 +57,6 @@ export const ICONS = {
   dji:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="24" y="26" width="16" height="12" rx="3"/><path d="M24 28L12 18M40 28l12-10M24 36L12 46M40 36l12 10"/><ellipse cx="12" cy="18" rx="8" ry="2.5"/><ellipse cx="52" cy="18" rx="8" ry="2.5"/><ellipse cx="12" cy="46" rx="8" ry="2.5"/><ellipse cx="52" cy="46" rx="8" ry="2.5"/></svg>',
   other:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22l20-10 20 10v20L32 52 12 42z"/><path d="M12 22l20 10 20-10M32 32v20"/></svg>'
 };
-export const iconFor = cat => ICONS[cat] || ICONS.other;
+// Part types without their own drawing borrow the closest one.
+const ICON_ALIAS = { boards: "stack", sensors: "video", gimbal: "video", remote: "radio", cables: "stack", body: "dji" };
+export const iconFor = cat => ICONS[cat] || ICONS[ICON_ALIAS[cat]] || ICONS.other;

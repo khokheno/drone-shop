@@ -35,6 +35,12 @@ header.site{position:sticky;top:0;z-index:20;background:var(--surface);border-bo
 .search svg{position:absolute;inset-inline-start:11px;top:50%;transform:translateY(-50%);width:16px;color:var(--muted)}
 .cats{display:flex;gap:8px;overflow-x:auto;padding-block:0 12px;scrollbar-width:none}
 .cats::-webkit-scrollbar{display:none}
+/* Brand and model rows sit under the categories, a step quieter. */
+.cats.sub{margin-top:-4px}
+.cats.sub .cat{padding:4px 10px;font-size:12px;background:transparent}
+.cats.sub .cat[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.fits{font-size:14px}
+.fits b{font-weight:600}
 .lang{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
 .lang button{border:0;background:transparent;padding:6px 10px;font-size:13px;font-weight:500;color:var(--muted)}
 .lang button+button{border-inline-start:1px solid var(--line)}

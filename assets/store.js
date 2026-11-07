@@ -7,7 +7,9 @@ let S = { ...DEFAULT_SETTINGS };
 let money = moneyFmt(S.currency);
 let PRODUCTS = [];
 let byId = {};
-let cat = "all", query = "";
+// Filters: part type (cat), drone brand and model. They combine, and are kept in the page link (?cat=&brand=&model=).
+const URLQ = new URLSearchParams(location.search);
+let cat = URLQ.get("cat") || "all", brand = URLQ.get("brand") || "all", model = URLQ.get("model") || "all", query = "";
 let cart = {};
 try { cart = JSON.parse(localStorage.getItem("pw_cart") || "{}") || {}; } catch { cart = {}; }
 const saveCart = () => { try { localStorage.setItem("pw_cart", JSON.stringify(cart)); } catch {} };
@@ -31,7 +33,7 @@ const itemName = (k, local) => { const { p, o } = parseKey(k); const n = local ?
 async function load() {
   if (!configured) {
     // Preview mode before Firebase is set up: show sample parts.
-    PRODUCTS = SAMPLE_PRODUCTS.map((p, i) => ({ id: "sample" + i, category: p.cat, name: p.name, specs: p.specs, price: p.price, stock: p.stock, visible: true, sort: i }));
+    PRODUCTS = SAMPLE_PRODUCTS.map((p, i) => ({ id: "sample" + i, category: p.cat, brand: p.brand, models: p.models, name: p.name, specs: p.specs, price: p.price, stock: p.stock, visible: true, sort: i }));
     $("#grid").insertAdjacentHTML("beforebegin", `<div class="notice">Preview mode: Firebase isn't connected yet, so these are sample parts. Paste your config into <code>assets/config.js</code>.</div>`);
   } else {
     try {
@@ -70,14 +72,47 @@ function renderAll() {
 const phoneOk = ph => /^(0\d{8,9}|972\d{8,9})$/.test(ph.replace(/\D/g, ""));
 const catLabel = id => { const c = S.categories.find(c => c.id === id); return c ? catName(c) : id || catName({ id: "other", label: "Other" }); };
 
+const brands = () => S.brands || [];
+const brandOf = id => brands().find(b => b.id === id);
+const modelLabels = p => (p.models || []).map(m => brandOf(p.brand)?.models?.find(x => x.id === m)?.label).filter(Boolean);
+const inCat = p => cat === "all" || p.category === cat;
+const inBrand = p => brand === "all" || p.brand === brand;
+const inModel = p => model === "all" || (p.models || []).includes(model);
+// The model row belongs to the chosen brand, or to the only brand when there is just one.
+const brandsInUse = () => brands().filter(b => PRODUCTS.some(p => p.brand === b.id));
+const modelBrand = () => brand !== "all" ? brandOf(brand) : brandsInUse().length === 1 ? brandsInUse()[0] : null;
+
+function chip(attr, id, label, n, on) {
+  return `<button class="cat" type="button" ${attr}="${esc(id)}" aria-pressed="${on}" dir="auto">${esc(label)}<span>${n}</span></button>`;
+}
+// Each row counts what the other filters leave, so the numbers always match what a tap shows.
+// A row with only one choice is left out.
 function renderCats() {
+  // A link may name a filter that no longer exists; fall back to everything.
+  if (cat !== "all" && !PRODUCTS.some(p => p.category === cat)) cat = "all";
+  if (brand !== "all" && !brandOf(brand)) brand = model = "all";
+  if (model !== "all" && !PRODUCTS.some(p => (p.models || []).includes(model))) model = "all";
   const used = S.categories.filter(c => PRODUCTS.some(p => p.category === c.id));
   const extra = [...new Set(PRODUCTS.map(p => p.category))].filter(id => !S.categories.some(c => c.id === id)).map(id => ({ id, label: id }));
-  const list = [{ id: "all", label: t("allParts") }, ...used, ...extra];
-  $("#cats").innerHTML = list.map(c => {
-    const n = c.id === "all" ? PRODUCTS.length : PRODUCTS.filter(p => p.category === c.id).length;
-    return `<button class="cat" type="button" data-cat="${esc(c.id)}" aria-pressed="${c.id === cat}">${esc(c.id === "all" ? c.label : catLabel(c.id))}<span>${n}</span></button>`;
-  }).join("");
+  const forCats = PRODUCTS.filter(p => inBrand(p) && inModel(p));
+  $("#cats").innerHTML = chip("data-cat", "all", t("allParts"), forCats.length, cat === "all") +
+    [...used, ...extra].map(c => chip("data-cat", c.id, catLabel(c.id), forCats.filter(p => p.category === c.id).length, c.id === cat)).join("");
+
+  const inUse = brandsInUse(), forBrands = PRODUCTS.filter(inCat);
+  $("#brands").hidden = inUse.length < 2;
+  $("#brands").innerHTML = inUse.length < 2 ? "" : chip("data-brand", "all", t("allBrands"), forBrands.length, brand === "all") +
+    inUse.map(b => chip("data-brand", b.id, b.label, forBrands.filter(p => p.brand === b.id).length, b.id === brand)).join("");
+
+  const mb = modelBrand(), forModels = PRODUCTS.filter(p => inCat(p) && p.brand === mb?.id);
+  const models = (mb?.models || []).filter(m => PRODUCTS.some(p => p.brand === mb.id && (p.models || []).includes(m.id)));
+  $("#models").hidden = models.length < 2;
+  $("#models").innerHTML = models.length < 2 ? "" : chip("data-model", "all", t("allModels", mb.label), forModels.length, model === "all") +
+    models.map(m => chip("data-model", m.id, m.label, forModels.filter(p => (p.models || []).includes(m.id)).length, m.id === model)).join("");
+}
+function syncURL() {
+  const u = new URL(location.href);
+  for (const [k, v] of [["cat", cat], ["brand", brand], ["model", model]]) v === "all" ? u.searchParams.delete(k) : u.searchParams.set(k, v);
+  history.replaceState(null, "", u);
 }
 
 function stepper(k, q) {
@@ -101,7 +136,7 @@ function stockText(n) {
 }
 const camera = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 function overlays(p) {
-  return `<span class="tag ${p.category === "dji" ? "dji" : ""}">${esc(catLabel(p.category))}</span>` +
+  return `<span class="tag ${p.brand === "dji" || p.category === "dji" ? "dji" : ""}">${esc(catLabel(p.category))}</span>` +
     (isUsed(p) ? `<span class="used-tag">${t("used")}</span>` : "") +
     (!(p.stock > 0) ? `<span class="soldout-tag">${t("soldOut")}</span>` : "");
 }
@@ -117,8 +152,8 @@ const cardSpecs = specs => specs.slice(0, CARD_SPECS).map(s => `<span dir="auto"
 
 function renderGrid() {
   const ql = query.trim().toLowerCase();
-  const list = PRODUCTS.filter(p => (cat === "all" || p.category === cat) &&
-    (!ql || [p.name, ...Object.values(p.tr || {}).flatMap(x => [x.name, x.description]), isUsed(p) ? t("used") + " used" : "", ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category)].join(" ").toLowerCase().includes(ql)));
+  const list = PRODUCTS.filter(p => inCat(p) && inBrand(p) && inModel(p) &&
+    (!ql || [p.name, ...Object.values(p.tr || {}).flatMap(x => [x.name, x.description]), isUsed(p) ? t("used") + " used" : "", ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category), brandOf(p.brand)?.label || "", ...modelLabels(p)].join(" ").toLowerCase().includes(ql)));
   if (!PRODUCTS.length) { $("#grid").innerHTML = `<p class="empty">${t("empty")}</p>`; return; }
   if (!list.length) { $("#grid").innerHTML = `<p class="empty">${t("noMatch", esc(query))}</p>`; return; }
   $("#grid").innerHTML = list.map(p => `<article class="card">
@@ -181,6 +216,7 @@ async function openDetail(id, keepGallery) {
   d.innerHTML = `<div class="sheet-head"><h2 id="dTitle" dir="auto">${esc(nameOf(p))}</h2><button class="x" type="button" data-close aria-label="${t("close")}">✕</button></div>
     <div class="d-body">
       <div id="dGallery">${galleryHTML(p, p.image ? [p.image] : [])}</div>
+      ${modelLabels(p).length ? `<div class="fits"><b>${t("fits")}</b> <span dir="ltr">${esc([brandOf(p.brand).label, ...modelLabels(p)].join(" · "))}</span></div>` : ""}
       <div class="specs">${(p.specs || []).map(s => `<span dir="auto">${esc(s)}</span>`).join("")}</div>
       ${descOf(p) ? `<p dir="auto">${esc(descOf(p))}</p>` : ""}
       <div id="dBuy" class="buy">${buyHTML(p)}</div>
@@ -257,12 +293,14 @@ function closeCart() { $("#sheet").hidden = true; if ($("#detail").hidden) $("#s
 function closeAll() { $("#sheet").hidden = true; $("#detail").hidden = true; $("#scrim").hidden = true; }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-inc],[data-dec],[data-rm],[data-cat],[data-open],[data-close],[data-opt],[data-g],[data-dot]");
+  const t = e.target.closest("[data-inc],[data-dec],[data-rm],[data-cat],[data-brand],[data-model],[data-open],[data-close],[data-opt],[data-g],[data-dot]");
   if (!t) return;
   if (t.dataset.inc) setQty(t.dataset.inc, (cart[t.dataset.inc] || 0) + 1);
   else if (t.dataset.dec) setQty(t.dataset.dec, (cart[t.dataset.dec] || 0) - 1);
   else if (t.dataset.rm) setQty(t.dataset.rm, 0);
-  else if (t.dataset.cat) { cat = t.dataset.cat; renderCats(); renderGrid(); }
+  else if (t.dataset.cat) { cat = t.dataset.cat; syncURL(); renderCats(); renderGrid(); }
+  else if (t.dataset.brand) { brand = t.dataset.brand; model = "all"; syncURL(); renderCats(); renderGrid(); }
+  else if (t.dataset.model) { model = t.dataset.model; syncURL(); renderCats(); renderGrid(); }
   else if (t.dataset.open) openDetail(t.dataset.open);
   else if (t.dataset.opt) { const id = $("#detail").dataset.id; chosen[id] = t.dataset.opt; openDetail(id, true); }
   else if (t.dataset.g) goSlide(slideIndex($("#gSlides")) + Number(t.dataset.g));

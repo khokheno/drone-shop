@@ -69,6 +69,7 @@
       <div class="toolbar">
         <input id="pSearch" type="search" placeholder="Search parts" aria-label="Search parts">
         <select id="pCat" aria-label="Filter by category"></select>
+        <select id="pBrand" aria-label="Filter by brand"></select>
         <select id="pShow" aria-label="Filter by status">
           <option value="all">All</option><option value="low">Low stock (≤3)</option><option value="out">Sold out</option><option value="hidden">Hidden</option><option value="used">Used</option>
         </select>
@@ -110,6 +111,10 @@
         <p class="note">The order here is the order customers see. Renaming keeps parts in the category.</p>
         <div id="catRows" class="cats-edit"></div>
         <button class="ghost" type="button" id="addCat">+ Add category</button>
+        <h2>Brands &amp; models</h2>
+        <p class="note">The drone brands you sell parts for, and their models. Customers filter by brand, then model. Brands and models in use can't be removed until no part uses them.</p>
+        <div id="brandRows" class="brands-edit"></div>
+        <button class="ghost" type="button" id="addBrand">+ Add brand</button>
         <div class="savebar"><span class="note" id="sMsg"></span><button class="primary" type="submit">Save settings</button></div>
         <h2>Shipping labels</h2>
         <p class="note">These are saved on this device only, so your phone and computer can use different printers. Labels print through the normal print dialog: pick your network printer there (AirPrint on iPhone and Mac).</p>
@@ -140,6 +145,10 @@
     <div class="two">
       <label for="eCat">Category<select id="eCat"></select></label>
       <label for="eSort">Sort order <em>lower shows first</em><input id="eSort" type="number" step="1" value="0"></label>
+    </div>
+    <div class="two">
+      <label for="eBrand">Brand <em>the drone it's for</em><select id="eBrand"></select></label>
+      <div class="fitsbox"><span class="lbl">Fits models <em>tick all that apply</em></span><div id="eModels" class="mchecks"></div></div>
     </div>
     <div class="two">
       <label for="ePrice">Price<input id="ePrice" type="number" min="0" step="0.01" inputmode="decimal" required></label>

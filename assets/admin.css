@@ -82,6 +82,18 @@ code{font-family:var(--f-mono);font-size:.92em;background:var(--chip);padding:1p
 .catrow input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .catrow small{font-family:var(--f-mono);color:var(--muted);font-size:11px;min-width:24px;text-align:right}
 .catrow button{border:1px solid var(--line);background:transparent;border-radius:6px;width:32px;height:32px}
+.brands-edit{display:flex;flex-direction:column;gap:10px}
+.brandbox{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.brandbox .catrow{grid-template-columns:minmax(0,1fr) auto auto}
+.brandbox .bname input{font-weight:600}
+.brandbox .mrow{padding-inline-start:18px}
+.brandbox .linkish{margin-inline-start:18px}
+.fitsbox{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500}
+.fitsbox em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
+.mchecks{display:flex;flex-wrap:wrap;gap:6px}
+.mchecks label{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:5px!important;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px!important;font-weight:400!important;cursor:pointer}
+.mchecks label:has(input:checked){border-color:var(--accent);color:var(--accent)}
+.mchecks input{width:auto!important;margin:0}
 .savebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:8px}
 
 .sheet.wide{width:min(560px,100%)}
