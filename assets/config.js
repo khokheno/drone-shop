@@ -11,3 +11,7 @@ export const firebaseConfig = {
   messagingSenderId: "516949602576",
   appId: "1:516949602576:web:d35dd59235023824463595"
 };
+
+// Microsoft Clarity (free visitor stats, heatmaps and session recordings), shop only, never the admin.
+// clarity.microsoft.com → your project → Settings → Overview → Project ID. Empty turns it off.
+export const clarityId = "";

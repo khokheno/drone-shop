@@ -1,6 +1,7 @@
-import { configured, db, collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from "./firebase.js?v=20261107183742";
-import { esc, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js?v=20261107183742";
-import { t, lang, catName, settingText, setLang, applyStatic } from "./i18n.js?v=20261107183742";
+import { configured, db, collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from "./firebase.js?v=20261107190111";
+import { esc, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js?v=20261107190111";
+import { track } from "./analytics.js?v=20261107190111";
+import { t, lang, catName, settingText, setLang, applyStatic } from "./i18n.js?v=20261107190111";
 
 const $ = s => document.querySelector(s);
 let S = { ...DEFAULT_SETTINGS };
@@ -209,6 +210,7 @@ function buyHTML(p) {
 
 async function openDetail(id, keepGallery) {
   const p = byId[id]; if (!p) return;
+  if (!keepGallery) track("open_part");
   const d = $("#detail");
   if (keepGallery && d.dataset.id === id && !d.hidden) { $("#dBuy").innerHTML = buyHTML(p); return; }
   d.dataset.id = id;
@@ -282,12 +284,13 @@ function updateLink() {
 function setQty(k, q) {
   const { p, ok } = parseKey(k); if (!ok) return;
   q = Math.max(0, Math.min(stockOf(k), q));
+  if (q && !cart[k]) track("add_to_cart");
   if (q) cart[k] = q; else delete cart[k];
   saveCart(); renderGrid(); renderCart();
   if (!$("#detail").hidden && $("#detail").dataset.id === p.id) openDetail(p.id, true);
 }
 
-function openCart() { $("#detail").hidden = true; $("#sheet").hidden = false; $("#scrim").hidden = false; $("#closeCart").focus(); }
+function openCart() { track("open_cart"); $("#detail").hidden = true; $("#sheet").hidden = false; $("#scrim").hidden = false; $("#closeCart").focus(); }
 function closeCart() { $("#sheet").hidden = true; if ($("#detail").hidden) $("#scrim").hidden = true; }
 function closeAll() { $("#sheet").hidden = true; $("#detail").hidden = true; $("#scrim").hidden = true; }
 
@@ -339,6 +342,7 @@ $("#waBtn").addEventListener("click", e => {
       createdAt: serverTimestamp()
     }).catch(err => console.warn("Order not saved", err));
   }
+  track("order_sent", { lang });
   // Next cart gets a fresh order number.
   setTimeout(() => { orderNo = null; updateLink(); }, 500);
 });

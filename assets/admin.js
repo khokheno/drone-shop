@@ -2,8 +2,8 @@ import {
   configured, db, auth, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
   getDocs, query, orderBy, limit, writeBatch, increment, serverTimestamp, onSnapshot,
   signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
-} from "./firebase.js?v=20261107183742";
-import { esc, slug, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js?v=20261107183742";
+} from "./firebase.js?v=20261107190111";
+import { esc, slug, moneyFmt, iconFor, DEFAULT_SETTINGS, SAMPLE_PRODUCTS } from "./util.js?v=20261107190111";
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
