@@ -83,7 +83,7 @@ const brandsInUse = () => brands().filter(b => PRODUCTS.some(p => p.brand === b.
 const modelBrand = () => brand !== "all" ? brandOf(brand) : brandsInUse().length === 1 ? brandsInUse()[0] : null;
 
 function chip(attr, id, label, n, on) {
-  return `<button class="cat" type="button" ${attr}="${esc(id)}" aria-pressed="${on}" dir="auto">${esc(label)}<span>${n}</span></button>`;
+  return `<button class="cat${n || on ? "" : " zero"}" type="button" ${attr}="${esc(id)}" aria-pressed="${on}" dir="auto">${esc(label)}<span>${n}</span></button>`;
 }
 // Each row counts what the other filters leave, so the numbers always match what a tap shows.
 // A row with only one choice is left out.

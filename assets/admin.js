@@ -71,6 +71,8 @@ async function start() {
     products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     products.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || String(a.name).localeCompare(b.name));
     renderParts();
+    // Settings shows how many parts use each category, brand and model, and only lets unused ones be removed.
+    renderCats(); renderBrands();
   }, e => fail(e, "Parts list")));
   unsub.push(onSnapshot(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(300)), snap => {
     orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
