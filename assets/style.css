@@ -35,10 +35,14 @@ header.site{position:sticky;top:0;z-index:20;background:var(--surface);border-bo
 .search svg{position:absolute;inset-inline-start:11px;top:50%;transform:translateY(-50%);width:16px;color:var(--muted)}
 .cats{display:flex;gap:8px;overflow-x:auto;padding-block:0 12px;scrollbar-width:none}
 .cats::-webkit-scrollbar{display:none}
-/* Brand and model rows sit under the categories, a step quieter. */
-.cats.sub{margin-top:-4px}
-.cats.sub .cat{padding:4px 10px;font-size:12px;background:transparent}
-.cats.sub .cat[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+/* Drone picker: the heading above the categories. */
+.drone{padding-block:0 10px}
+.drone label{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);max-width:100%}
+.drone select{font:inherit;font-weight:600;color:var(--fg);background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:7px 30px 7px 12px;min-width:0;max-width:100%;
+  appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--accent) 50%),linear-gradient(135deg,var(--accent) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+[dir="rtl"] .drone select{padding:7px 12px 7px 30px;background-position:15px 50%,10px 50%}
+.cat.zero{opacity:.45}
 .fits{font-size:14px}
 .fits b{font-weight:600}
 .lang{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
@@ -48,8 +52,6 @@ header.site{position:sticky;top:0;z-index:20;background:var(--surface);border-bo
 .cat{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:500;white-space:nowrap}
 .cat[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .cat span{font-family:var(--f-mono);font-size:11px;opacity:.65}
-.cat i{font-style:normal;font-size:11px;margin-inline-start:2px;opacity:.8}
-.rowlbl{flex:none;align-self:center;font-size:12px;color:var(--muted);padding-inline-end:2px}
 
 .intro{padding-block:28px 8px;display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
 .intro h1{font-family:var(--f-display);font-size:clamp(26px,4vw,38px);line-height:1.05;margin:0;text-wrap:balance;max-width:20ch}

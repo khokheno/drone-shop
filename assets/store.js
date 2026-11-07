@@ -82,36 +82,31 @@ const inModel = p => model === "all" || (p.models || []).includes(model);
 const brandsInUse = () => brands().filter(b => PRODUCTS.some(p => p.brand === b.id));
 const modelBrand = () => brand !== "all" ? brandOf(brand) : brandsInUse().length === 1 ? brandsInUse()[0] : null;
 
-// Choices with nothing left under the other filters are left out. A chosen brand or model shows ✕ and turns off with another tap.
-function chip(attr, id, label, n, on) {
-  if (!n && !on) return "";
-  const x = on && id !== "all" && attr !== "data-cat" ? `<i aria-hidden="true">✕</i>` : "";
-  return `<button class="cat" type="button" ${attr}="${esc(id)}" aria-pressed="${on}" dir="auto">${esc(label)}<span>${n}</span>${x}</button>`;
+function chip(id, label, n, on) {
+  return `<button class="cat${n || on ? "" : " zero"}" type="button" data-cat="${esc(id)}" aria-pressed="${on}" dir="auto">${esc(label)}<span>${n}</span></button>`;
 }
-const rowLabel = key => `<span class="rowlbl">${t(key)}:</span>`;
-// Each row counts what the other filters leave, so the numbers always match what a tap shows.
-// A row with only one choice is left out.
+// The drone picker is the heading: brand → model. Under it the part-type categories always stay,
+// counting the parts for the chosen drone (a category with none for it is faded, not removed).
 function renderCats() {
   // A link may name a filter that no longer exists; fall back to everything.
   if (cat !== "all" && !PRODUCTS.some(p => p.category === cat)) cat = "all";
   if (brand !== "all" && !brandOf(brand)) brand = model = "all";
-  if (model !== "all" && !PRODUCTS.some(p => (p.models || []).includes(model))) model = "all";
+  if (model !== "all" && !PRODUCTS.some(p => p.brand === brand && (p.models || []).includes(model))) model = "all";
   const used = S.categories.filter(c => PRODUCTS.some(p => p.category === c.id));
   const extra = [...new Set(PRODUCTS.map(p => p.category))].filter(id => !S.categories.some(c => c.id === id)).map(id => ({ id, label: id }));
   const forCats = PRODUCTS.filter(p => inBrand(p) && inModel(p));
-  $("#cats").innerHTML = chip("data-cat", "all", t("allParts"), forCats.length, cat === "all") +
-    [...used, ...extra].map(c => chip("data-cat", c.id, catLabel(c.id), forCats.filter(p => p.category === c.id).length, c.id === cat)).join("");
+  $("#cats").innerHTML = chip("all", t("allParts"), forCats.length, cat === "all") +
+    [...used, ...extra].map(c => chip(c.id, catLabel(c.id), forCats.filter(p => p.category === c.id).length, c.id === cat)).join("");
 
-  const inUse = brandsInUse(), forBrands = PRODUCTS.filter(inCat);
-  $("#brands").hidden = inUse.length < 2;
-  $("#brands").innerHTML = inUse.length < 2 ? "" : rowLabel("brandsLabel") + chip("data-brand", "all", t("allBrands"), forBrands.length, brand === "all") +
-    inUse.map(b => chip("data-brand", b.id, b.label, forBrands.filter(p => p.brand === b.id).length, b.id === brand)).join("");
-
-  const mb = modelBrand(), forModels = PRODUCTS.filter(p => inCat(p) && p.brand === mb?.id);
-  const models = (mb?.models || []).filter(m => PRODUCTS.some(p => p.brand === mb.id && (p.models || []).includes(m.id)));
-  $("#models").hidden = models.length < 2;
-  $("#models").innerHTML = models.length < 2 ? "" : rowLabel("modelsLabel") + chip("data-model", "all", t("allModels", mb.label), forModels.length, model === "all") +
-    models.map(m => chip("data-model", m.id, m.label, forModels.filter(p => (p.models || []).includes(m.id)).length, m.id === model)).join("");
+  const groups = brandsInUse().map(b => {
+    const ms = (b.models || []).map(m => ({ ...m, n: PRODUCTS.filter(p => p.brand === b.id && (p.models || []).includes(m.id)).length })).filter(m => m.n);
+    const n = PRODUCTS.filter(p => p.brand === b.id).length;
+    return `<optgroup label="${esc(b.label)}"><option value="b:${esc(b.id)}">${esc(t("allModels", b.label))} (${n})</option>` +
+      ms.map(m => `<option value="m:${esc(b.id)}:${esc(m.id)}">${esc(m.label)} (${m.n})</option>`).join("") + `</optgroup>`;
+  });
+  $("#droneBar").hidden = !groups.length;
+  $("#drone").innerHTML = `<option value="all">${esc(t("allDrones"))} (${PRODUCTS.length})</option>` + groups.join("");
+  $("#drone").value = model !== "all" ? `m:${brand}:${model}` : brand !== "all" ? `b:${brand}` : "all";
 }
 function syncURL() {
   const u = new URL(location.href);
@@ -159,7 +154,7 @@ function renderGrid() {
   const list = PRODUCTS.filter(p => inCat(p) && inBrand(p) && inModel(p) &&
     (!ql || [p.name, ...Object.values(p.tr || {}).flatMap(x => [x.name, x.description]), isUsed(p) ? t("used") + " used" : "", ...(p.specs || []), ...(p.options || []).map(o => o.label), p.description || "", catLabel(p.category), brandOf(p.brand)?.label || "", ...modelLabels(p)].join(" ").toLowerCase().includes(ql)));
   if (!PRODUCTS.length) { $("#grid").innerHTML = `<p class="empty">${t("empty")}</p>`; return; }
-  if (!list.length) { $("#grid").innerHTML = `<p class="empty">${t("noMatch", esc(query))}</p>`; return; }
+  if (!list.length) { $("#grid").innerHTML = `<p class="empty">${query.trim() ? t("noMatch", esc(query)) : t("noneHere")}</p>`; return; }
   $("#grid").innerHTML = list.map(p => `<article class="card">
       <button class="thumb" type="button" data-open="${p.id}" aria-label="${esc(t("view", nameOf(p)))}">${thumb(p)}</button>
       <div class="body">
@@ -297,14 +292,12 @@ function closeCart() { $("#sheet").hidden = true; if ($("#detail").hidden) $("#s
 function closeAll() { $("#sheet").hidden = true; $("#detail").hidden = true; $("#scrim").hidden = true; }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-inc],[data-dec],[data-rm],[data-cat],[data-brand],[data-model],[data-open],[data-close],[data-opt],[data-g],[data-dot]");
+  const t = e.target.closest("[data-inc],[data-dec],[data-rm],[data-cat],[data-open],[data-close],[data-opt],[data-g],[data-dot]");
   if (!t) return;
   if (t.dataset.inc) setQty(t.dataset.inc, (cart[t.dataset.inc] || 0) + 1);
   else if (t.dataset.dec) setQty(t.dataset.dec, (cart[t.dataset.dec] || 0) - 1);
   else if (t.dataset.rm) setQty(t.dataset.rm, 0);
   else if (t.dataset.cat) { cat = t.dataset.cat; syncURL(); renderCats(); renderGrid(); }
-  else if (t.dataset.brand) { brand = t.dataset.brand === brand ? "all" : t.dataset.brand; model = "all"; syncURL(); renderCats(); renderGrid(); }
-  else if (t.dataset.model) { model = t.dataset.model === model ? "all" : t.dataset.model; syncURL(); renderCats(); renderGrid(); }
   else if (t.dataset.open) openDetail(t.dataset.open);
   else if (t.dataset.opt) { const id = $("#detail").dataset.id; chosen[id] = t.dataset.opt; openDetail(id, true); }
   else if (t.dataset.g) goSlide(slideIndex($("#gSlides")) + Number(t.dataset.g));
@@ -315,6 +308,11 @@ document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click"
   setLang(b.dataset.lang); renderAll();
   if (!$("#detail").hidden) openDetail($("#detail").dataset.id);
 }));
+$("#drone").addEventListener("change", e => {
+  const [kind, b = "all", m = "all"] = e.target.value.split(":");
+  brand = kind === "all" ? "all" : b; model = kind === "m" ? m : "all";
+  syncURL(); renderCats(); renderGrid();
+});
 $("#q").addEventListener("input", e => { query = e.target.value; renderGrid(); });
 $("#openCart").addEventListener("click", openCart);
 $("#closeCart").addEventListener("click", closeCart);

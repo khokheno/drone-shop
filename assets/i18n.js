@@ -32,7 +32,7 @@ const T = {
     loadErr: "تعذّر تحميل قائمة القطع. تحقق من الاتصال وحدّث الصفحة.",
     each: p => `${p} للقطعة`, remove: "إزالة", cartEmpty: "سلتك فارغة.",
     hello: (s, no) => `مرحبًا ${s}، أود أن أطلب (طلب رقم ${no}):`, mName: "الاسم", mCity: "المدينة", mNotes: "ملاحظات",
-    brandsLabel: "الماركة", modelsLabel: "الطراز", allBrands: "كل الماركات", allModels: b => `كل ${b}`, fits: "مناسب لـ:",
+    partsFor: "قطع لـ", noneHere: "لا توجد قطع من هذه الفئة لهذه الطائرة حاليًا. جرّب فئة أخرى أو اسألنا عبر واتساب.", allDrones: "كل الطائرات", brandsLabel: "الماركة", modelsLabel: "الطراز", allBrands: "كل الماركات", allModels: b => `كل ${b}`, fits: "مناسب لـ:",
     cats: { boards: "لوحات و ESC", sensors: "حساسات، رؤية و GPS", body: "الهيكل والهوائيات والإضاءة", cables: "كابلات flex", motors: "محركات ومراوح", remote: "جهاز التحكم", gimbal: "gimbal وكاميرا", batteries: "بطاريات وشواحن", props: "مراوح", frames: "هياكل", stack: "متحكم طيران و ESC", video: "كاميرات و VTX", radio: "مستقبلات", other: "أخرى" }
   },
   he: {
@@ -59,7 +59,7 @@ const T = {
     loadErr: "לא הצלחנו לטעון את רשימת החלקים. בדקו את החיבור ורעננו את הדף.",
     each: p => `${p} ליחידה`, remove: "הסרה", cartEmpty: "העגלה ריקה.",
     hello: (s, no) => `היי ${s}, אני רוצה להזמין (הזמנה ${no}):`, mName: "שם", mCity: "עיר", mNotes: "הערות",
-    brandsLabel: "מותג", modelsLabel: "דגם", allBrands: "כל המותגים", allModels: b => `כל ${b}`, fits: "מתאים ל:",
+    partsFor: "חלקים ל", noneHere: "אין כרגע חלקים מהקטגוריה הזו לרחפן הזה. נסו קטגוריה אחרת או שאלו אותנו בוואטסאפ.", allDrones: "כל הרחפנים", brandsLabel: "מותג", modelsLabel: "דגם", allBrands: "כל המותגים", allModels: b => `כל ${b}`, fits: "מתאים ל:",
     cats: { boards: "לוחות ו-ESC", sensors: "חיישנים, ראייה ו-GPS", body: "גוף, אנטנות ותאורה", cables: "כבלי flex", motors: "מנועים ופרופלורים", remote: "שלט", gimbal: "gimbal ומצלמה", batteries: "סוללות ומטענים", props: "פרופלורים", frames: "שלדות", stack: "בקר טיסה ו-ESC", video: "מצלמות ו-VTX", radio: "מקלטים", other: "אחר" }
   },
   en: {
@@ -85,7 +85,7 @@ const T = {
     loadErr: "We couldn't load the parts list. Check your connection and refresh the page.",
     each: p => `${p} each`, remove: "Remove", cartEmpty: "Your cart is empty.",
     hello: (s, no) => `Hi ${s}, I'd like to order (order ${no}):`, mName: "Name", mCity: "City", mNotes: "Notes",
-    brandsLabel: "Brand", modelsLabel: "Model", allBrands: "All brands", allModels: b => `All ${b}`, fits: "Fits:",
+    partsFor: "Parts for", noneHere: "No parts in this category for this drone right now. Try another category or ask us on WhatsApp.", allDrones: "All drones", brandsLabel: "Brand", modelsLabel: "Model", allBrands: "All brands", allModels: b => `All ${b}`, fits: "Fits:",
     cats: {}
   }
 };
