@@ -98,6 +98,19 @@ $$("[data-tab]").forEach(b => b.addEventListener("click", () => {
 
 // ───────── Parts list ─────────
 ["#pSearch", "#pCat", "#pShow"].forEach(s => $(s).addEventListener("input", renderParts));
+// List order is remembered on this device. createdAt is set when a part is added (older parts were backfilled).
+const ms = ts => ts?.toMillis ? ts.toMillis() : Date.now(); // a part saved a moment ago has no server time yet
+const SORTS = {
+  shop: (a, b) => (a.sort ?? 0) - (b.sort ?? 0) || String(a.name).localeCompare(b.name),
+  newest: (a, b) => ms(b.createdAt) - ms(a.createdAt),
+  oldest: (a, b) => ms(a.createdAt) - ms(b.createdAt),
+  updated: (a, b) => ms(b.updatedAt) - ms(a.updatedAt),
+  name: (a, b) => String(a.name).localeCompare(b.name),
+  stock: (a, b) => (a.stock || 0) - (b.stock || 0),
+  price: (a, b) => (b.price || 0) - (a.price || 0)
+};
+try { const v = localStorage.getItem("pw_part_sort"); if (SORTS[v]) $("#pSort").value = v; } catch {}
+$("#pSort").addEventListener("input", () => { try { localStorage.setItem("pw_part_sort", $("#pSort").value); } catch {} renderParts(); });
 
 function renderParts() {
   const units = products.reduce((n, p) => n + (p.stock || 0), 0);
@@ -111,7 +124,7 @@ function renderParts() {
   const list = products.filter(p =>
     (c === "all" || p.category === c) &&
     (f === "all" || (f === "low" && p.stock > 0 && p.stock <= 3) || (f === "out" && !(p.stock > 0)) || (f === "hidden" && p.visible === false) || (f === "used" && p.condition === "used")) &&
-    (!q || [p.name, ...(p.specs || [])].join(" ").toLowerCase().includes(q)));
+    (!q || [p.name, ...(p.specs || [])].join(" ").toLowerCase().includes(q))).sort(SORTS[$("#pSort").value] || SORTS.shop);
 
   if (!products.length) {
     $("#pList").innerHTML = `<div class="panel" style="width:100%"><h1 style="font-size:20px">No parts yet</h1>
@@ -165,7 +178,7 @@ $("#addBtn").addEventListener("click", () => openEditor(null));
 async function loadSamples() {
   const b = writeBatch(db);
   SAMPLE_PRODUCTS.forEach((p, i) => b.set(doc(collection(db, "products")), {
-    name: p.name, category: p.cat, specs: p.specs, price: p.price, stock: p.stock, description: "", image: "", visible: true, sort: i, updatedAt: serverTimestamp()
+    name: p.name, category: p.cat, specs: p.specs, price: p.price, stock: p.stock, description: "", image: "", visible: true, sort: i, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
   }));
   try { await b.commit(); toast("Sample parts added. Edit or delete them any time."); } catch (e) { fail(e, "Sample parts"); }
 }
@@ -343,6 +356,7 @@ $("#eForm").addEventListener("submit", async e => {
     visible: $("#eVisible").checked,
     image: photos[0] || "",
     photoCount: newCount,
+    ...(editing ? {} : { createdAt: serverTimestamp() }),
     updatedAt: serverTimestamp()
   }, { merge: true });
   photos.slice(1).forEach((data, j) => b.set(doc(ref, "photos", String(j + 1)), { i: j + 1, data }));
@@ -625,7 +639,7 @@ $("#iGo").addEventListener("click", async () => {
       const b = writeBatch(db);
       parsed.slice(i, i + 400).forEach((p, j) => b.set(doc(collection(db, "products")), {
         name: p.name, price: p.price, stock: p.stock, category: resolve(p.catLabel), specs: p.specs.slice(0, 12),
-        description: p.description, condition: p.condition, image: "", visible: true, sort: products.length + i + j, updatedAt: serverTimestamp()
+        description: p.description, condition: p.condition, image: "", visible: true, sort: products.length + i + j, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
       }));
       await b.commit();
     }

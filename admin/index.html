@@ -72,6 +72,9 @@
         <select id="pShow" aria-label="Filter by status">
           <option value="all">All</option><option value="low">Low stock (≤3)</option><option value="out">Sold out</option><option value="hidden">Hidden</option><option value="used">Used</option>
         </select>
+        <select id="pSort" aria-label="Sort parts">
+          <option value="shop">Sort: shop order</option><option value="newest">Newest added</option><option value="oldest">Oldest added</option><option value="updated">Recently edited</option><option value="name">Name A–Z</option><option value="stock">Lowest stock</option><option value="price">Highest price</option>
+        </select>
         <span class="spacer"></span>
         <button class="ghost" type="button" id="importBtn">Import CSV</button>
         <button class="primary" type="button" id="addBtn">+ Add part</button>
